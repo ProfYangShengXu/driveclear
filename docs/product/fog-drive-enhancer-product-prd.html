@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DriveClear — 驾驶视界增强系统 产品设计文档</title>
+  <style>
+    :root {
+      --bg: #fafafa;
+      --card: #ffffff;
+      --accent: #1a73e8;
+      --accent-light: #e8f0fe;
+      --text: #1f1f1f;
+      --text-secondary: #5f6368;
+      --border: #e0e0e0;
+      --tag-bg: #e8f0fe;
+      --tag-text: #1a73e8;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans SC", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      padding: 0;
+    }
+    .container { max-width: 900px; margin: 0 auto; padding: 0 24px; }
+
+    /* Header */
+    header {
+      background: linear-gradient(135deg, #0d2137 0%, #1a3a5c 100%);
+      color: #fff;
+      padding: 64px 0 48px;
+      margin-bottom: 48px;
+    }
+    header h1 { font-size: 2.6rem; font-weight: 700; margin-bottom: 8px; }
+    header .subtitle { font-size: 1.2rem; opacity: 0.8; margin-bottom: 16px; }
+    header .meta { font-size: 0.9rem; opacity: 0.6; display: flex; gap: 24px; flex-wrap: wrap; }
+
+    /* Sections */
+    section { margin-bottom: 48px; }
+    section h2 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--accent);
+      margin-bottom: 20px;
+      padding-bottom: 8px;
+      border-bottom: 3px solid var(--accent-light);
+    }
+    section h3 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin: 20px 0 8px;
+    }
+    section p { margin-bottom: 12px; color: var(--text-secondary); }
+    section ul { margin: 8px 0 16px 20px; }
+    section li { margin-bottom: 6px; color: var(--text-secondary); }
+
+    /* Cards */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+      margin: 16px 0;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .card h4 { font-size: 1rem; font-weight: 600; margin-bottom: 8px; }
+    .card p, .card li { font-size: 0.92rem; color: var(--text-secondary); }
+    .card ul { margin: 6px 0 0 16px; }
+    .card li { margin-bottom: 4px; }
+
+    /* Tags */
+    .tag {
+      display: inline-block;
+      background: var(--tag-bg);
+      color: var(--tag-text);
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 2px 10px;
+      border-radius: 12px;
+      margin: 2px 4px 2px 0;
+    }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0;
+      font-size: 0.92rem;
+    }
+    th, td {
+      text-align: left;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+    }
+    th {
+      background: var(--accent-light);
+      font-weight: 600;
+    }
+    td { color: var(--text-secondary); }
+
+    /* Quote block */
+    .quote {
+      background: var(--accent-light);
+      border-left: 4px solid var(--accent);
+      padding: 16px 20px;
+      border-radius: 0 8px 8px 0;
+      margin: 16px 0;
+      font-style: italic;
+      color: var(--text);
+    }
+
+    /* Risk cards */
+    .risk-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .risk-card {
+      background: #fff8e1;
+      border: 1px solid #ffe082;
+      border-radius: 10px;
+      padding: 16px;
+    }
+    .risk-card h4 { font-size: 0.95rem; margin-bottom: 6px; }
+    .risk-card p { font-size: 0.88rem; color: #795548; }
+
+    footer {
+      text-align: center;
+      padding: 32px 0;
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+      border-top: 1px solid var(--border);
+    }
+
+    @media (max-width: 600px) {
+      header { padding: 40px 0 32px; }
+      header h1 { font-size: 1.8rem; }
+      .risk-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="container">
+    <h1>🚗 DriveClear</h1>
+    <div class="subtitle">驾驶视界增强系统 — 让每一段行车视频都清晰可辨</div>
+    <div class="meta">
+      <span>📅 文档版本: v1.0 — 2026-06-18</span>
+      <span>✍️ 作者: 陈廷俊 · 韩廷欣</span>
+      <span>🏫 ECE4512 Final Project 2025</span>
+    </div>
+  </div>
+</header>
+
+<div class="container">
+
+<!-- ========== 1. 背景与目标 ========== -->
+<section>
+  <h2>一、背景与目标</h2>
+
+  <h3>现实问题</h3>
+  <p>
+    每年有大量交通事故发生在恶劣天气和低光照条件下。雾天能见度骤降、对向车灯眩光使驾驶员瞬间致盲、
+    夜间/隧道出入口低光照让行人及障碍物淹没在阴影中——这些不是"偶尔遇到"的边角场景，而是全球每年数百万起事故的直接原因。
+  </p>
+  <p>
+    现有的行车记录仪和辅助摄像头在晴天白天表现良好，但一旦遇到雾、眩光、暗光三者中的任何一个，
+    画面质量就会断崖式下降。更棘手的是，这三种退化经常同时出现（雨雾天的夜间对向车灯），
+    而市面上的解决方案只能处理其中一种。
+  </p>
+
+  <div class="quote">
+    "从停车场出来，隧道出口的强光 + 薄雾 + 对向远光灯，三秒内我什么都看不见。"
+    <br>—— 受访驾驶员，驾龄 12 年
+  </div>
+
+  <h3>一句话定位</h3>
+  <p style="font-size:1.2rem; font-weight:600; color:var(--accent);">
+    行车视频的「全能滤镜」—— 自动识别并修复雾霾 / 眩光 / 低光照，让每帧画面都接近晴日白天的质量。
+  </p>
+
+  <h3>成功标准（非技术指标）</h3>
+  <ul>
+    <li><strong>感知提升:</strong> 在盲测中，80% 的驾驶员认为增强后的画面比原始画面更容易识别障碍物</li>
+    <li><strong>覆盖场景:</strong> 在雾天、眩光、低光、混合四类场景中，至少三类的主观评分较原始视频有明显提升</li>
+    <li><strong>可用性:</strong> 处理一段 10 分钟行车视频耗时不超过 20 分钟，用户愿意等待</li>
+    <li><strong>验证范围:</strong> 至少覆盖 3 个公开数据集 + 真实社交媒体行车视频，确保泛化</li>
+  </ul>
+</section>
+
+<!-- ========== 2. 用户画像 ========== -->
+<section>
+  <h2>二、用户画像</h2>
+  <p>三类核心用户，他们在乎的事情完全不同。</p>
+
+  <div class="card-grid">
+
+    <div class="card">
+      <h4>🧑‍🔧 类型 A：交通事故调查员 / 保险理赔员</h4>
+      <ul>
+        <li><strong>身份:</strong> 交警事故科、保险公司理赔中心</li>
+        <li><strong>场景:</strong> 拿到一段雾天/夜间的事故行车记录仪视频，雾太大看不清前车车牌和行人</li>
+        <li><strong>痛点:</strong> 原始画面无法作为证据使用；人工逐帧看十几分钟视频效率极低</li>
+        <li><strong>使用频率:</strong> 周均 5-15 次，取决于案件量</li>
+        <li><strong>核心诉求:</strong> "别给我加花哨效果，把雾去了、把车牌给我看清就行"</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h4>🚛 类型 B：车队管理者 / 物流安全主管</h4>
+      <ul>
+        <li><strong>身份:</strong> 物流公司安全部门、出租车/网约车平台运营</li>
+        <li><strong>场景:</strong> 每天审核上百辆车的行车记录仪回传画面，评估驾驶员是否违规/危险驾驶</li>
+        <li><strong>痛点:</strong> 雾天/夜间的视频基本没法用，覆盖所有车辆的 AI 违规识别系统因此频频漏报</li>
+        <li><strong>使用频率:</strong> 每天批量处理</li>
+        <li><strong>核心诉求:</strong> "自动批量处理、不丢帧、处理完能和原片快速对比"</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h4>🎥 类型 C：车载视觉 / ADAS 研发工程师</h4>
+      <ul>
+        <li><strong>身份:</strong> 自动驾驶公司、Tier 1 供应商的视觉算法团队</li>
+        <li><strong>场景:</strong> 在恶劣天气数据上训练/测试感知模型，需要数据增强前处理</li>
+        <li><strong>痛点:</strong> 模型在 clean 数据上效果很好，一到雾天/夜间 recall 暴跌 30%+</li>
+        <li><strong>使用频率:</strong> 每周在新采集的数据集上跑一次全量预处理</li>
+        <li><strong>核心诉求:</strong> "可复现、模块可拆、能集成进我自己的 pipeline，别搞成黑盒"</li>
+      </ul>
+    </div>
+
+  </div>
+
+  <div style="margin-top: 12px;">
+    <p><strong>优先级排序:</strong> A（事故调查）&gt; B（车队管理）&gt; C（研发集成）</p>
+    <p style="color: var(--text-secondary); font-size:0.92rem;">
+      A 和 B 有最直接的实际需求——他们是"看不清就没办法干活"的人。C 的需求更长远，但产品需要先服务好 A 和 B 来证明价值。
+    </p>
+  </div>
+</section>
+
+<!-- ========== 3. MVP 定义 ========== -->
+<section>
+  <h2>三、MVP 定义</h2>
+
+  <h3>Must-have（必须包含）</h3>
+  <ul>
+    <li>📤 <strong>视频上传:</strong> 支持 .mp4 格式，拖拽或点击上传，最大 500MB</li>
+    <li>🌫️ <strong>雾霾去除:</strong> 浓雾视频处理后，远处车辆和行人轮廓可辨</li>
+    <li>☀️ <strong>眩光抑制:</strong> 对向车灯光晕被压低，不损失周边暗部细节</li>
+    <li>🌙 <strong>低光照增强:</strong> 夜间路面和行人亮度提升至可辨认水平</li>
+    <li>🤖 <strong>自动调度:</strong> 系统根据画面内容自动判断该用哪个模块，用户不需要手动选择</li>
+    <li>🔄 <strong>原片对比:</strong> 处理前后视频分屏对比播放</li>
+    <li>💾 <strong>结果导出:</strong> 下载增强后的视频文件</li>
+    <li>🎚️ <strong>参数微调:</strong> 高级用户可微调去雾强度、锐化力度等</li>
+  </ul>
+
+  <h3>Nice-to-have（一期后加）</h3>
+  <ul>
+    <li>📋 批量上传与队列处理</li>
+    <li>🖼️ 关键帧截图导出（车牌帧自动提取）</li>
+    <li>📊 画面质量评分报告（处理前后客观指标对比）</li>
+    <li>🔌 REST API 开放给第三方系统调用</li>
+    <li>☁️ 云端处理（无需本地安装）</li>
+    <li>📱 手机端 App</li>
+  </ul>
+
+  <h3>明确不做</h3>
+  <div class="card-grid" style="grid-template-columns: 1fr;">
+    <div class="card" style="border-left: 4px solid #e53935;">
+      <ul>
+        <li>❌ <strong>不接入行车记录仪硬件</strong> — 只处理上传的视频文件，不做硬件绑定</li>
+        <li>❌ <strong>不做实时直播流</strong> — 不支持 RTSP/RTMP 实时处理，仅处理完整视频文件</li>
+        <li>❌ <strong>不实现自动驾驶决策</strong> — 只做画面增强，不做物体识别/路径规划</li>
+        <li>❌ <strong>不生成合成数据</strong> — 不伪造雨天/雾天的训练数据</li>
+        <li>❌ <strong>不提供移动端 App</strong> — 一期仅 Web 网页端</li>
+      </ul>
+    </div>
+  </div>
+  <p style="color: var(--text-secondary); font-size:0.92rem; margin-top:8px;">
+    明确不做什么，让团队把精力集中在一件事上：<strong>把视频处理干净。</strong>
+  </p>
+</section>
+
+<!-- ========== 4. 2B / 2C 分析 ========== -->
+<section>
+  <h2>四、2B / 2C 分析</h2>
+
+  <table>
+    <thead>
+      <tr>
+        <th>维度</th>
+        <th>To C（个人车主 / 驾驶爱好者）</th>
+        <th>To B（机构 / 企业）</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>用户是谁</strong></td>
+        <td>普通车主、驾驶爱好者、自驾游博主</td>
+        <td>保险公司、物流车队、交警事故科、ADAS 研发团队</td>
+      </tr>
+      <tr>
+        <td><strong>付费意愿</strong></td>
+        <td>低 — 愿意用免费版，付费意愿弱（除非出了事故需要举证）</td>
+        <td>中高 — 看得见 ROI（缩短理赔时间、减少漏报事故），年费模式可接受</td>
+      </tr>
+      <tr>
+        <td><strong>决策链</strong></td>
+        <td>一人决策，使用即决策</td>
+        <td>长链条：安全主管提需求 → IT 评估 → 采购审批 → 部署培训，周期 1-6 个月</td>
+      </tr>
+      <tr>
+        <td><strong>核心功能差异</strong></td>
+        <td>简单上传→处理→下载，尽量零配置</td>
+        <td>批量处理 + API 集成 + 报告导出 + 合规审计</td>
+      </tr>
+      <tr>
+        <td><strong>使用频率</strong></td>
+        <td>偶尔使用（仅事故后或出游后）</td>
+        <td>高频（每日批量跑全车队数据）</td>
+      </tr>
+      <tr>
+        <td><strong>获客方式</strong></td>
+        <td>口碑传播、汽车论坛/短视频平台种草</td>
+        <td>行业展会、销售拜访、试用→付费转化</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>主次关系</h3>
+  <p>
+    <strong>主 B 副 C。</strong> 产品的核心价值——"让看不清的画面变得看清"——在 To B 场景中可以直接换算成钱
+    （减少事故认定时间、提高保险理赔效率）。To C 是品牌入口和口碑积累，用来跑通产品流程、打磨用户体验。
+    财务上，B 端付费支撑产品持续运营；C 端免费模式做用户基数和数据积累。
+  </p>
+  <p>
+    功能分区上，<strong>MVP 以 C 端体验为蓝本</strong>（上传→即用→看到效果），
+    同时预留 B 端所需的批量处理接口参数。一期不实现完整的 B 端管理后台。
+  </p>
+</section>
+
+<!-- ========== 5. 设计理念 ========== -->
+<section>
+  <h2>五、设计理念</h2>
+
+  <h3>体验关键词</h3>
+  <div style="display: flex; gap: 12px; flex-wrap: wrap; margin: 12px 0;">
+    <span class="tag" style="font-size:0.95rem;">🧼 干净</span>
+    <span class="tag" style="font-size:0.95rem;">⚡ 直觉</span>
+    <span class="tag" style="font-size:0.95rem;">🔍 可信</span>
+  </div>
+
+  <h3>核心交互原则</h3>
+  <ol style="margin: 8px 0 16px 20px;">
+    <li style="margin-bottom: 12px;">
+      <strong>单一操作路径，不分支。</strong>
+      用户只有一条路：上传 → 处理 → 看效果 → 导出。每一步只有一个主操作按钮。
+      不需要用户选择"用什么算法"——系统自动判断。
+    </li>
+    <li style="margin-bottom: 12px;">
+      <strong>对比 > 孤评。</strong>
+      人的视觉判断需要参照物。任何时候展示处理结果，旁边必须有原始画面的同屏对比。
+      无对比不出结果。
+    </li>
+    <li style="margin-bottom: 12px;">
+      <strong>尊重用户的等待，但别让他们空等。</strong>
+      处理进度每帧可见，每一次进度更新都告诉用户"当前在处理第几帧 / 总共多少帧"。
+      让等待可预期、可取消。
+    </li>
+  </ol>
+
+  <h3>视觉风格方向</h3>
+  <ul>
+    <li><strong>深色底色 + 高亮强调:</strong> 因为产品处理的是行车视频，深色 UI 让视频内容成为视觉焦点；强调色使用蓝色系，传递"可靠"、"科技"的感觉</li>
+    <li><strong>大对比区:</strong> 原始/增强的分屏占据页面主体面积（>60%），控制面板侧边折叠，不抢占注意力</li>
+    <li><strong>极简图标 + 中文文案:</strong> 每一个功能按钮用中文动词开头（"上传视频"、"开始处理"、"对比原片"），不玩英文缩写梗</li>
+    <li><strong>动画克制:</strong> 进度条和状态切换有缓动动画，但绝不使用弹窗/飘入/闪烁等干扰性动效——用户在看视频，不是在玩游戏</li>
+  </ul>
+</section>
+
+<!-- ========== 6. 风险 ========== -->
+<section>
+  <h2>六、风险（非技术）</h2>
+
+  <div class="risk-grid">
+
+    <div class="risk-card">
+      <h4>📉 市场风险</h4>
+      <p>
+        <strong>竞品已有不少。</strong> 市面上有 Topaz Video AI、ArcSoft 等通用视频增强工具，
+        行车记录仪厂商也开始内置基础增强功能。但它们的共性是<strong>通用优化而非场景专用</strong>——
+        没人在意"对向车灯眩光"这个具体的行车场景。差异化在于：联合处理三种退化 + 自动调度，
+        而不是让用户自己拧十几个参数。
+      </p>
+    </div>
+
+    <div class="risk-card">
+      <h4>⚖️ 运营与合规风险</h4>
+      <p>
+        <strong>视频证据的"真实性"问题。</strong> 如果增强后的视频被用作交通事故的法律证据，
+        对方律师可能质疑"处理过的画面是否可被采信"。需要留存处理参数日志 + 原片完整备份，
+        提供"仅做了去雾/增强，未修改物体位置和时序"的技术声明。
+      </p>
+    </div>
+
+    <div class="risk-card">
+      <h4>🔥 冷启动风险</h4>
+      <p>
+        <strong>第一波用户从哪来？</strong> 行车记录仪是个极其分散的市场，没有统一的渠道。
+        冷启动策略：① 在汽车论坛（汽车之家、懂车帝）发对比 demo 视频做传播；
+        ② 与 1-2 家中小型物流公司合作免费试用换取案例背书；
+        ③ 在 GitHub 开源算法核心（非全量），吸引开发者贡献并传播。
+      </p>
+    </div>
+
+    <div class="risk-card">
+      <h4>💰 变现路径</h4>
+      <p>
+        <strong>Freemium + 按量付费。</strong> 基础处理（去雾+增强，≤5min 视频）免费；
+        完整流水线（含眩光+低光+批量）按分钟计费。B 端年费模式：按车队车辆数阶梯定价。
+        初期不追求收入——先用免费版积累用户和数据，有了真实用户反馈后再调整定价。
+        学术项目阶段以论文和 demo 为交付物，不涉及商业变现。
+      </p>
+    </div>
+
+  </div>
+</section>
+
+<!-- ========== Footer ========== -->
+<footer>
+  <p>DriveClear — 驾驶视界增强系统 · 产品设计文档 v1.0</p>
+  <p>ECE4512 Final Project 2025 · 后续由 pipeline 架构师转为技术 PRD</p>
+</footer>
+
+</div>
+</body>
+</html>

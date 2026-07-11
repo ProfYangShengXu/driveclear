@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DriveClear — 技术架构文档 v1.0</title>
+  <style>
+    :root {
+      --bg: #f5f7fa;
+      --card: #ffffff;
+      --accent: #1a73e8;
+      --accent-light: #e8f0fe;
+      --green: #0d904f;
+      --green-bg: #e6f4ea;
+      --orange: #e37400;
+      --orange-bg: #fef7e0;
+      --red: #d93025;
+      --red-bg: #fce8e6;
+      --text: #1f1f1f;
+      --text-secondary: #5f6368;
+      --border: #dadce0;
+      --code-bg: #f1f3f4;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans SC", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+    }
+    .container { max-width: 960px; margin: 0 auto; padding: 0 24px; }
+
+    /* Header */
+    header {
+      background: linear-gradient(135deg, #0d2137 0%, #1a3a5c 100%);
+      color: #fff;
+      padding: 56px 0 40px;
+      margin-bottom: 40px;
+    }
+    header h1 { font-size: 2.2rem; font-weight: 700; margin-bottom: 8px; }
+    header .subtitle { font-size: 1.1rem; opacity: 0.8; }
+    header .meta { font-size: 0.88rem; opacity: 0.55; margin-top: 12px; display: flex; gap: 20px; flex-wrap: wrap; }
+
+    /* Sections */
+    section { margin-bottom: 40px; }
+    section h2 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--accent);
+      margin-bottom: 16px;
+      padding-bottom: 6px;
+      border-bottom: 3px solid var(--accent-light);
+    }
+    section h3 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin: 20px 0 8px;
+    }
+    section h4 { font-size: 0.98rem; font-weight: 600; margin: 14px 0 4px; }
+    p { margin-bottom: 10px; color: var(--text-secondary); }
+    ul, ol { margin: 6px 0 12px 20px; }
+    li { margin-bottom: 4px; color: var(--text-secondary); }
+
+    /* Status badges */
+    .status { display: inline-block; font-size: 0.78rem; font-weight: 600; padding: 2px 10px; border-radius: 10px; margin-left: 6px; }
+    .status-done { background: var(--green-bg); color: var(--green); }
+    .status-new { background: var(--orange-bg); color: var(--orange); }
+    .status-upgrade { background: var(--accent-light); color: var(--accent); }
+
+    /* Cards */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 14px;
+      margin: 14px 0;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px;
+    }
+    .card h4 { font-size: 0.95rem; font-weight: 600; margin-bottom: 6px; }
+    .card p, .card li { font-size: 0.9rem; color: var(--text-secondary); }
+
+    /* Module table */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0;
+      font-size: 0.92rem;
+    }
+    th, td { text-align: left; padding: 10px 12px; border: 1px solid var(--border); }
+    th { background: var(--accent-light); font-weight: 600; font-size:0.85rem; }
+    td { color: var(--text-secondary); }
+
+    /* Code */
+    code {
+      background: var(--code-bg);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.88rem;
+    }
+    pre {
+      background: #1f1f1f;
+      color: #e8e8e8;
+      padding: 14px 18px;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-size: 0.85rem;
+      line-height: 1.5;
+    }
+
+    /* Highlight box */
+    .highlight {
+      background: var(--accent-light);
+      border-left: 4px solid var(--accent);
+      padding: 14px 18px;
+      border-radius: 0 8px 8px 0;
+      margin: 14px 0;
+    }
+    .highlight strong { color: var(--accent); }
+
+    .diagram {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px;
+      margin: 14px 0;
+      font-family: "Courier New", monospace;
+      font-size: 0.82rem;
+      line-height: 1.6;
+      white-space: pre;
+      overflow-x: auto;
+    }
+
+    footer {
+      text-align: center;
+      padding: 32px 0;
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+      border-top: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="container">
+    <h1>🏗️ DriveClear — 技术架构文档</h1>
+    <div class="subtitle">驾驶视界增强系统 · ECE4512 Final Project 2025</div>
+    <div class="meta">
+      <span>📅 v1.0 — 2026-06-18</span>
+      <span>✍️ 架构师: Chen Tingjun · Han Tingxin</span>
+      <span>📐 基于产品 PRD: fog-drive-enhancer-product-prd.html</span>
+    </div>
+  </div>
+</header>
+
+<div class="container">
+
+<!-- ========== 1. 架构总览 ========== -->
+<section>
+  <h2>1. 架构总览</h2>
+
+  <div class="highlight">
+    <strong>核心设计原则：</strong> 每个模块独立可测、接口统一、传统图像处理方法（非机器学习）。
+    所有处理模块的输入输出均为 <code>(H, W, 3) uint8 BGR ndarray</code>。
+  </div>
+
+  <h3>1.1 模块全景</h3>
+
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>模块名</th>
+        <th>状态</th>
+        <th>职责（一句话）</th>
+        <th>依赖</th>
+        <th>风险维度</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>M0</code></td>
+        <td>视频 I/O & Web API</td>
+        <td><span class="status status-done">✅ 已有</span></td>
+        <td>上传/校验/读帧/写入/下载/清理 + REST API</td>
+        <td>—</td>
+        <td>容错 · 安全</td>
+      </tr>
+      <tr>
+        <td><code>M1</code></td>
+        <td>时域雾层估计 + DCP 去雾</td>
+        <td><span class="status status-done">✅ 已有</span></td>
+        <td>运行式最小值跟踪雾层 + 暗通道先验恢复</td>
+        <td>M0</td>
+        <td>容错</td>
+      </tr>
+      <tr>
+        <td><code>M2</code></td>
+        <td>自适应融合 + 亮度增强</td>
+        <td><span class="status status-done">✅ 已有</span></td>
+        <td>运动幅值融合 + Lab-L 通道 CLAHE/锐化/伽马 + 色彩校正</td>
+        <td>M1</td>
+        <td>技术债</td>
+      </tr>
+      <tr>
+        <td><code>M3</code></td>
+        <td>眩光抑制</td>
+        <td><span class="status status-new">🆕 新建</span></td>
+        <td>亮通道检测眩光 → 局部亮度抑制 → 时域插值恢复</td>
+        <td>M0</td>
+        <td>容错 · 回滚</td>
+      </tr>
+      <tr>
+        <td><code>M4</code></td>
+        <td>低光照增强</td>
+        <td><span class="status status-new">🆕 新建</span></td>
+        <td>Retinex 分解 → 照明层伽马 + 反射层 CLAHE + 噪声抑制</td>
+        <td>M0</td>
+        <td>熔断 · 技术债</td>
+      </tr>
+      <tr>
+        <td><code>M5</code></td>
+        <td>退化检测器</td>
+        <td><span class="status status-new">🆕 新建</span></td>
+        <td>帧级统计量 → 雾/眩光/低光 三个 [0,1] score</td>
+        <td>—</td>
+        <td>容错</td>
+      </tr>
+      <tr>
+        <td><code>M6</code></td>
+        <td>管线编排器</td>
+        <td><span class="status status-upgrade">🔄 重构</span></td>
+        <td>按 config + 退化检测结果动态调度 M1-M5</td>
+        <td>M1-M5</td>
+        <td>回滚 · 技术债</td>
+      </tr>
+      <tr>
+        <td><code>M7</code></td>
+        <td>评估框架</td>
+        <td><span class="status status-new">🆕 新建</span></td>
+        <td>PSNR/SSIM/NIQE/BRISQUE 自动化计算</td>
+        <td>—</td>
+        <td>监控</td>
+      </tr>
+      <tr>
+        <td><code>M8</code></td>
+        <td>基线对比</td>
+        <td><span class="status status-new">🆕 新建</span></td>
+        <td>DCP-only / CLAHE-only / Retinex / DriveClear 对比</td>
+        <td>M7</td>
+        <td>技术债</td>
+      </tr>
+      <tr>
+        <td><code>M9</code></td>
+        <td>消融实验</td>
+        <td><span class="status status-new">🆕 新建</span></td>
+        <td>逐模块 disable → 量化贡献表</td>
+        <td>M6, M7</td>
+        <td>容错</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>1.2 为什么这么分（模块划分理由）</h3>
+  <ol>
+    <li><strong>M1 / M2 与 M5 分离</strong> — M1/M2 是"处理"模块，M5 是"感知"模块。感知逻辑不耦合在管线里，可独立测试和调参。如果要换一种退化检测策略（比如用局部方差替代暗通道均值），只需要改 M5，不动 M1。</li>
+    <li><strong>M3 / M4 独立为模块</strong> — 因为眩光和低光的处理策略完全不同（一个是找亮区压下去，一个是找暗区提上来），合在一个文件里会违反单一职责。分开后分别测试。</li>
+    <li><strong>M6 单独作为编排层</strong> — 把"调用哪个模块"的决策逻辑从处理逻辑中分离。这样加一个新的退化类型（比如雨纹去除）时，只需要新建模块 + 在 M5 加一个 score，不需要改编排器核心。</li>
+    <li><strong>M7 / M8 / M9 独立于应用</strong> — 评估和消融不是产品功能，是论文/课程交付所需的实验框架。把它们放在 <code>scripts/</code> 而不是 <code>algorithms/</code>，避免产品代码膨胀。</li>
+  </ol>
+</section>
+
+<!-- ========== 2. 数据流 ========== -->
+<section>
+  <h2>2. 数据流</h2>
+
+  <h3>2.1 单帧处理管线</h3>
+
+  <div class="diagram">输入帧 (H,W,3) uint8 BGR
+  │
+  ├── M5: 退化检测器
+  │     haze_score = mean(dark_channel) × (1 - mean(saturation))
+  │     glare_score = ratio(bright_channel &gt; 220) × peak_entropy
+  │     low_light_score = sigmoid((40 - mean_luminance) / 20)
+  │
+  ├── M3: 眩光抑制 (if glare_score &gt; threshold 或 auto_detect=False)
+  │     detect_glare → suppress_glare( + temporal_inpaint )
+  │
+  ├── M4: 低光照增强 (if low_light_score &gt; threshold 或 auto_detect=False)
+  │     Retinex分解 → illum_gamma + reflect_clahe → 合并
+  │
+  ├── M1: 时域雾层估计 + DCP 去雾 (if haze_score &gt; threshold 或 auto_detect=False)
+  │     TemporalFogEstimator.update() → dehaze()
+  │
+  ├── M2: 自适应融合 + 亮度增强 (if enable_fusion/enable_enhance)
+  │     compute_motion_map → fuse_frames → CLAHE + Sharpen + Gamma → color_restore
+  │
+  └── 输出增强帧</div>
+
+  <div class="highlight">
+    <strong>关键设计：</strong> 当 <code>auto_detect=True</code> 时，M5 的 score 决定是否激活 M3/M4/M1。
+    当 <code>auto_detect=False</code> 时，用户通过 <code>PipelineConfig</code> 明确启用/禁用每个模块。
+    <strong>处理顺序固定为 眩光→低光→去雾→融合增强</strong>，因为：
+    <br>① 眩光抑制需要在"原始"亮区上检测
+    <br>② 低光增强在去雾之前做，避免 DCP 将暗区噪声放大
+  </div>
+
+  <h3>2.2 视频级数据流</h3>
+
+  <div class="diagram">用户上传视频
+  │
+  POST /api/upload
+  │
+  └── video_service.save_upload()
+      │
+      POST /api/process/{id} (含 PipelineConfig JSON)
+      │
+      └── processing_service.process_pipeline()
+          │
+          ├── 逐帧: read_frames() 生成器 → [处理管线] → write_video()
+          │
+          └── 完成后 status=COMPLETED
+
+  前端轮询 GET /api/status/{id} → 进度更新
+  完成后 GET /api/download/{id} → 下载
+  DELETE /api/cleanup/{id} → 清理</div>
+
+</section>
+
+<!-- ========== 3. 接口契约 ========== -->
+<section>
+  <h2>3. 接口契约</h2>
+
+  <h3>3.1 模块间统一接口</h3>
+  <p>所有处理模块遵循相同模式：</p>
+  <pre>def process(frame: np.ndarray, **params) -> np.ndarray:
+    \"\"\"处理单帧
+
+    Args:
+        frame: (H, W, 3) uint8 BGR 输入帧
+        **params: 模块特定参数（可选）
+
+    Returns:
+        result: (H, W, 3) uint8 BGR 处理后的帧
+    \"\"\"</pre>
+
+  <h3>3.2 PipelineConfig（核心配置结构）</h3>
+  <pre>{
+    # 模块开关
+    "enable_fog": True,
+    "enable_glare": True,
+    "enable_low_light": True,
+    "enable_fusion": True,
+    "enable_enhance": True,
+
+    # 自动检测模式
+    "auto_detect": True,       # True: M5 决定各模块是否启用
+                               # False: 按 enable_* 开关执行
+    # 退化检测阈值（auto_detect=True 时生效）
+    "haze_threshold": 0.3,
+    "glare_threshold": 0.4,
+    "low_light_threshold": 0.35,
+
+    # 各模块参数（透传）
+    "omega": 0.95,             # M1 去雾强度
+    "clahe_clip": 2.0,         # M2/M4 CLAHE
+    "sharpen_sigma": 1.0,      # M2 锐化
+    "sharpen_strength": 0.8,
+    "glare_strength": 0.7,     # M3 眩光抑制强度
+    "low_light_strength": 1.0, # M4 低光增强强度
+}</pre>
+
+  <h3>3.3 依赖方向</h3>
+  <pre>高层（编排） → 接口层 ← 低层（实现）
+
+  M6 (编排器)
+   │
+   ├──→ M1 (去雾接口) ←── frame_diff.py + dehaze.py
+   ├──→ M2 (融合接口) ←── enhance.py
+   ├──→ M3 (眩光接口) ←── glare.py          [新建]
+   ├──→ M4 (低光接口) ←── low_light.py      [新建]
+   └──→ M5 (检测接口) ←── degradation_detector.py [新建]
+
+  不允许：低层模块直接 import 高层模块
+  不允许：循环依赖（如 M1 → M6 → M1）</pre>
+</section>
+
+<!-- ========== 4. 各模块详细设计 ========== -->
+<section>
+  <h2>4. 各模块详细设计</h2>
+
+  <!-- M3 -->
+  <h3>4.1 M3 — 眩光抑制 <span class="status status-new">🆕</span></h3>
+  <p><strong>文件：</strong> <code>backend/algorithms/glare.py</code></p>
+  <p><strong>为什么要用传统方法：</strong> 眩光在图像中表现为高亮度、低纹理、边缘模糊的圆形/椭圆形区域。不需要神经网络——亮通道阈值 + 形态学分析 + 时域插值即可有效抑制。</p>
+
+  <h4>算法步骤</h4>
+  <ol>
+    <li><strong>亮通道提取：</strong> <code>bright = max(R, G, B)</code> → 阈值分割（>220）→ 候选眩光区域</li>
+    <li><strong>几何过滤：</strong> 计算每个连通区域的 <code>面积 / (π × 半径²)</code> 圆度比 → 过滤非圆形区域（车灯保留）</li>
+    <li><strong>局部亮度抑制：</strong> 眩光区域内像素值 = lerp(原值, 局部背景均值, strength)</li>
+    <li><strong>时域插值：</strong> 利用前后帧对应位置的非眩光像素加权平均补全纹理</li>
+  </ol>
+
+  <h4>接口签名</h4>
+  <pre>def detect_glare(frame: np.ndarray) -> tuple[np.ndarray, float]:
+    """返回 (glare_mask, glare_intensity)"""
+
+def suppress_glare(frame: np.ndarray, glare_mask: np.ndarray,
+                   prev_frame: np.ndarray | None = None,
+                   strength: float = 0.7) -> np.ndarray:
+    """返回抑制后的帧"""</pre>
+
+  <h4>风险措施</h4>
+  <ul>
+    <li><strong>车灯误抑制：</strong> 仅处理面积 &gt; 300px² 且圆度 &gt; 0.7 的区域。小光源（远处车灯）面积小，放过。</li>
+    <li><strong>无眩光帧：</strong> <code>detect_glare</code> 返回全零 mask → <code>suppress_glare</code> 直接返回原帧（M3-A3 验证）</li>
+  </ul>
+
+  <!-- M4 -->
+  <h3>4.2 M4 — 低光照增强 <span class="status status-new">🆕</span></h3>
+  <p><strong>文件：</strong> <code>backend/algorithms/low_light.py</code></p>
+  <p><strong>为什么不直接用现成的 CLAHE：</strong> 现有 Phase4 的 CLAHE 是作为"后处理"做的，没有显式的照明/反射分离。对于极暗帧（mean luminance &lt; 30），直接 CLAHE 会放大噪声。Retinex 分解可分别控制照明层（全局亮度）和反射层（纹理细节）。</p>
+
+  <h4>算法步骤</h4>
+  <ol>
+    <li><strong>Retinex 分解（照明-反射分离）：</strong> 对亮度通道做高斯滤波（大核 σ=30）得到照明层 <code>I = G * L</code>，反射层 <code>R = L / I</code>（逐元素除法，ε=1e-6 防除零）</li>
+    <li><strong>照明层增强：</strong> 自适应伽马 <code>gamma = 1 + 0.6 × (1 - mean(I))</code> → 低亮度区域提升更多</li>
+    <li><strong>反射层 CLAHE：</strong> clipLimit=1.5（弱于 M2 的 2.0，避免过度增强噪声）</li>
+    <li><strong>噪声抑制：</strong> 对反射层做边缘保持滤波（双边滤波）→ 平滑噪声但保留边缘</li>
+    <li><strong>合并：</strong> <code>L_out = I_enhanced × R_denoised</code> → 转回 BGR</li>
+  </ol>
+
+  <h4>与 M2 Phase4 的关系</h4>
+  <p>如果 <code>enable_low_light=True</code> 且 <code>enable_enhance=True</code>：M4 做基础亮度提升，M2 做最终 CLAHE + 锐化。两者不冲突——M4 负责"把暗区拉起来"，M2 负责"让画面更锐利"。但如果 M4 已做 CLAHE，M2 可适当降低 clipLimit。</p>
+
+  <!-- M5 -->
+  <h3>4.3 M5 — 退化检测器 <span class="status status-new">🆕</span></h3>
+  <p><strong>文件：</strong> <code>backend/algorithms/degradation_detector.py</code></p>
+  <p><strong>为什么不需要 ML：</strong> 三种退化在统计层面有明确的信号特征。雾→暗通道均值高且饱和度低；眩光→亮度直方图右尾长且有高亮连通域；低光→亮度直方图集中在低端。这些都可以用 OpenCV 直方图 + 阈值做。</p>
+
+  <h4>各 score 的计算方式</h4>
+  <table>
+    <thead>
+      <tr><th>Score</th><th>计算方法</th><th>范围</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>haze_score</code></td>
+        <td><code>mean(dark_channel(frame)) × (1 - mean(saturation(frame)))</code> → sigmoid 归一化</td>
+        <td>[0, 1]</td>
+      </tr>
+      <tr>
+        <td><code>glare_score</code></td>
+        <td>亮通道(>220)像素比例 × top 0.1% 亮度的熵平整度 → 大且平的高亮区得分高</td>
+        <td>[0, 1]</td>
+      </tr>
+      <tr>
+        <td><code>low_light_score</code></td>
+        <td><code>sigmoid((40 - mean_luminance) / 20)</code> → 均值 40 时约 0.5，越低越高</td>
+        <td>[0, 1]</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h4>阈值策略</h4>
+  <p>默认阈值：haze=0.3, glare=0.4, low_light=0.35。这些是经验值，通过 M7 评估后可在消融实验中调优。</p>
+
+  <!-- M6 -->
+  <h3>4.4 M6 — 管线编排器 <span class="status status-upgrade">🔄 重构</span></h3>
+  <p><strong>文件：</strong> <code>backend/services/processing_service.py</code>（重构）</p>
+
+  <h4>重构要点</h4>
+  <ol>
+    <li><strong>提取模块接口包装器：</strong> 为 M1-M4 各写一个包装函数，统一签名 <code>process(frame, params) → frame</code></li>
+    <li><strong>引入 PipelineConfig：</strong> 替代原来分散的 <code>window_size, omega, clahe_clip</code> 等参数</li>
+    <li><strong>引入退化检测路由：</strong> 在帧循环中加入 <code>if auto_detect: scores = M5.analyze_frame(frame)</code> → 决定各模块是否运行</li>
+    <li><strong>保留旧接口兼容：</strong> 旧 <code>_process_video_worker</code> 保留为 <code>use_legacy=True</code> 时的 fallback</li>
+    <li><strong>新增 <code>process_pipeline()</code> 公开方法：</strong> 替代原来 <code>_process_video_worker</code> 的内部实现</li>
+  </ol>
+
+  <h4>新旧对比</h4>
+  <table>
+    <thead>
+      <tr><th>维度</th><th>旧（已有）</th><th>新（重构后）</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>参数传入</td><td>分散的字段</td><td>PipelineConfig dict</td></tr>
+      <tr><td>模块开关</td><td>总是全部执行</td><td>可逐模块启用/禁用</td></tr>
+      <tr><td>退化判断</td><td>无</td><td>M5 自动检测 / 手动控制</td></tr>
+      <tr><td>扩展新模块</td><td>需改管线代码</td><td>加新 module + 注册到编排器</td></tr>
+      <tr><td>前端控制</td><td>6 个独立参数</td><td>模块开关 + 退化阈值滑条</td></tr>
+    </tbody>
+  </table>
+
+  <!-- M7-M9 -->
+  <h3>4.5 M7-M9 — 评估与实验框架 <span class="status status-new">🆕</span></h3>
+  <p><strong>文件：</strong> <code>backend/scripts/evaluate.py</code>, <code>backend/scripts/baselines.py</code>, <code>backend/scripts/ablation.py</code></p>
+
+  <h4>M7 评估指标</h4>
+  <ul>
+    <li><code>PSNR</code> — <code>cv2.PSNR()</code> 或 <code>skimage.metrics.peak_signal_noise_ratio</code></li>
+    <li><code>SSIM</code> — <code>skimage.metrics.structural_similarity</code> (channel_axis=2)</li>
+    <li><code>NIQE</code> — <code>skimage.metrics.niqe</code>（需 0.23+）</li>
+    <li><code>BRISQUE</code> — <code>skimage.metrics.brisque_no_reference</code>（需 0.23+）</li>
+  </ul>
+
+  <h4>M8 基线清单</h4>
+  <table>
+    <thead>
+      <tr><th>基线</th><th>实现方式</th><th>对比目的</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>原片（no-op）</td><td>直接复制帧</td><td>零改进基线</td></tr>
+      <tr><td>DCP-only</td><td><code>dehaze.dehaze()</code> 单帧</td><td>去雾模块边际贡献</td></tr>
+      <tr><td>CLAHE-only</td><td><code>cv2.createCLAHE()</code> 在 Lab-L</td><td>增强模块边际贡献</td></tr>
+      <tr><td>Retinex（自定义）</td><td>高斯分解照明/反射</td><td>低光模块对比基线</td></tr>
+      <tr><td><strong>DriveClear 完整</strong></td><td>全管线</td><td>本方案综合指标</td></tr>
+    </tbody>
+  </table>
+
+  <h4>M9 消融实验配置</h4>
+  <pre>// 6 种配置，逐步叠加
+1. 仅 DCP 去雾         (M1)
+2. 去雾 + 融合+增强     (M1+M2)           — 当前已有
+3. 去雾 + 融合+增强 + 低光  (M1+M2+M4)    — 加低光
+4. 去雾 + 融合+增强 + 眩光  (M1+M2+M3)    — 加眩光
+5. 去雾 + 融合+增强 + 低光 + 眩光  (全)    — 完整流水线
+6. 全 + auto_detect     (M5+M6+M1+M2+M3+M4) — 加自动调度</pre>
+</section>
+
+<!-- ========== 5. 风险与质量 ========== -->
+<section>
+  <h2>5. 风险与质量（7 维自查）</h2>
+
+  <table>
+    <thead>
+      <tr><th>#</th><th>维度</th><th>风险点</th><th>措施</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>1</td><td>技术债</td><td>M2 的 Phase3/4 耦合在同一个文件</td><td>M6 重构时拆出接口，但 M2 内部实现暂不动</td></tr>
+      <tr><td>2</td><td>回滚</td><td>M6 新编排器可能破坏已有功能</td><td>旧 <code>_process_video_worker</code> 保留为 fallback；<code>use_legacy=True</code> 切回旧版</td></tr>
+      <tr><td>3</td><td>灰度</td><td>新模块默认启用，用户可能不熟悉</td><td>前端保留"经典模式"（仅去雾）和"完整模式"切换</td></tr>
+      <tr><td>4</td><td>熔断</td><td>M3/M4 对异常帧处理失败</td><td>各模块独立 try/except；模块崩溃不阻塞整个管线，跳过该帧处理</td></tr>
+      <tr><td>5</td><td>监控</td><td>退化检测器的 score 无记录</td><td>M5 的 <code>details</code> dict 写入日志，可通过 /api/status 返回</td></tr>
+      <tr><td>6</td><td>容错</td><td>引导滤波缺乏 opencv-contrib</td><td>已有双边滤波 fallback，M3/M4 同理增加 fallback</td></tr>
+      <tr><td>7</td><td>安全</td><td>上传文件路径注入</td><td>uuid 文件名 + 扩展名校验，已有实现</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ========== 6. 任务清单 ========== -->
+<section>
+  <h2>6. 任务清单与执行顺序</h2>
+
+  <div class="highlight">
+    <strong>2+1 选择： (a) 按模块拆</strong> — 每个 task 产出可独立测试的一个模块，边界清晰。开发顺序按照依赖图拓扑排序。
+  </div>
+
+  <table>
+    <thead>
+      <tr><th>#</th><th>模块</th><th>文件</th><th>复杂度</th><th>依赖</th><th>验收</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>T1</strong></td><td>M5</td><td><code>algorithms/degradation_detector.py</code></td>
+        <td><span style="color:var(--green)">低</span></td><td>—</td>
+        <td>M5-A1/A2/A3</td>
+      </tr>
+      <tr>
+        <td><strong>T2</strong></td><td>M3</td><td><code>algorithms/glare.py</code></td>
+        <td><span style="color:var(--orange)">中</span></td><td>—</td>
+        <td>M3-A1/A2/A3</td>
+      </tr>
+      <tr>
+        <td><strong>T3</strong></td><td>M4</td><td><code>algorithms/low_light.py</code></td>
+        <td><span style="color:var(--orange)">中</span></td><td>—</td>
+        <td>M4-A1/A2/A3</td>
+      </tr>
+      <tr>
+        <td><strong>T4</strong></td><td>M6</td><td><code>services/processing_service.py</code></td>
+        <td><span style="color:var(--red)">高</span></td><td>T1+T2+T3</td>
+        <td>M6-A1/A2/A3</td>
+      </tr>
+      <tr>
+        <td><strong>T5</strong></td><td>M7</td><td><code>scripts/evaluate.py</code></td>
+        <td><span style="color:var(--green)">低</span></td><td>—</td>
+        <td>M7-A1/A2/A3</td>
+      </tr>
+      <tr>
+        <td><strong>T6</strong></td><td>M8</td><td><code>scripts/baselines.py</code></td>
+        <td><span style="color:var(--orange)">中</span></td><td>T5</td>
+        <td>M8-A1/A2</td>
+      </tr>
+      <tr>
+        <td><strong>T7</strong></td><td>M9</td><td><code>scripts/ablation.py</code></td>
+        <td><span style="color:var(--orange)">中</span></td><td>T4+T5</td>
+        <td>M9-A1/A2</td>
+      </tr>
+      <tr>
+        <td><strong>T8</strong></td><td>M0</td><td><code>frontend/ControlPanel.tsx + types</code></td>
+        <td><span style="color:var(--green)">低</span></td><td>T4</td>
+        <td>模块开关 UI</td>
+      </tr>
+      <tr>
+        <td><strong>T9</strong></td><td>M0</td><td><code>backend/main.py</code></td>
+        <td><span style="color:var(--green)">低</span></td><td>T4</td>
+        <td>API 参数扩展</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>执行顺序（拓扑排序）</h3>
+  <pre>T1 (M5 退化检测器)    ──→  T4 (M6 编排器)  ──→  T7 (M9 消融)
+T2 (M3 眩光抑制)     ──→                   
+T3 (M4 低光增强)     ──→                   ──→  T8/T9 (UI/API)
+                                           ──→  T6 (M8 基线)
+T5 (M7 评估框架)     ──→                        ↑
+                                           ──────┘
+
+实际开发顺序建议:
+  T1 → T2 → T3 → T4 → T5 → T6 → T7 → T8 → T9</pre>
+
+  <p><strong>为什么 T5（评估框架）可以提前：</strong> 评估框架不依赖任何处理模块，只需要 OpenCV 读帧 + skimage 算指标。T1-T4 开发时就可以用 T5 验证效果。</p>
+</section>
+
+<!-- ========== 7. 不做的方案 ========== -->
+<section>
+  <h2>7. 不做的方案（设计时已排除）</h2>
+
+  <table>
+    <thead>
+      <tr><th>方案</th><th>排除理由</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>深度学习端到端去雾/增强</td>
+        <td>课程为数字图像处理，要求传统方法；且 DL 模型需 GPU 训练</td>
+      </tr>
+      <tr>
+        <td>光流法多帧对齐</td>
+        <td>光流计算量大，且 OpenCV 的 Farneback 光流对噪声敏感。改用帧差 + 运动蒙版</td>
+      </tr>
+      <tr>
+        <td>频域去雾（同态滤波）</td>
+        <td>实验中发现对雾霾效果不如 DCP，且参数难调</td>
+      </tr>
+      <tr>
+        <td>直方图匹配色彩校正</td>
+        <td>现有 restore_natural_colors 已足够，引入额外复杂度</td>
+      </tr>
+      <tr>
+        <td>实时 30 FPS 处理</td>
+        <td>当前逐帧 CPU 处理 5 FPS 是合理目标，实时需要 GPU/ffmpeg 硬件加速</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ========== Footer ========== -->
+<footer>
+  <p>DriveClear — 技术架构文档 v1.0 · ECE4512 Final Project 2025</p>
+  <p>🏗️ 架构师完成 · 拆为 10 个模块（M0-M9）· 9 个任务（T1-T9）</p>
+</footer>
+
+</div>
+</body>
+</html>

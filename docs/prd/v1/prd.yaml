@@ -1,0 +1,436 @@
+# =============================================================================
+# DriveClear — 驾驶视界增强系统 · 结构化技术 PRD
+# 版本: v1.0 (2026-06-18)
+# 基于产品 PRD: docs/product/fog-drive-enhancer-product-prd.html
+# 课程约束: ECE4512 数字图像处理 — 不使用机器学习方法
+# =============================================================================
+prd:
+  version: 1
+  product_prd: docs/product/fog-drive-enhancer-product-prd.html
+
+  # ─── 全局架构约束 ───────────────────────────────────────────────────────
+  constraints:
+    - "纯传统图像处理方法：OpenCV + NumPy + scikit-image，不引入 PyTorch/TensorFlow"
+    - "逐帧处理，不跨帧做光流/深度学习对齐"
+    - "所有模块输入输出统一为 (H,W,3) uint8 BGR NumPy ndarray"
+    - "模块可独立启用/禁用，通过 dict config 控制"
+    - "前后端通信保持现有 REST API 不变"
+
+  # ─── 模块定义 ───────────────────────────────────────────────────────────
+  modules:
+
+    # ── M0: 视频 I/O & Web API ──────────────────────────────────────────
+    - id: M0
+      name: 视频 I/O & Web API
+      summary: "视频上传、格式校验、逐帧读取、写入、下载、清理。前后端 REST API 通信"
+      status: existing  # 已有代码，minor 调整
+      interfaces:
+        - name: upload_video
+          input: { file: UploadFile }
+          output: { video_id: string, filename: string, message: string }
+          side_effects: [保存文件到 uploads/ 目录]
+        - name: process_video
+          input: { video_id: string, params: ProcessParams }
+          output: { video_id: string, status: string, message: string }
+          side_effects: [后台线程启动逐帧处理管线]
+        - name: get_status
+          input: { video_id: string }
+          output: { video_id: string, status: string, progress: float, current_frame: int, total_frames: int, fps: float, width: int, height: int , error: string? }
+        - name: download_result
+          input: { video_id: string }
+          output: { file: FileResponse }
+        - name: cleanup
+          input: { video_id: string }
+          output: { video_id: string, message: string }
+          side_effects: [删除 uploads/ 和 outputs/ 下的对应文件]
+      acceptance:
+        - id: M0-A1
+          desc: "上传合法 .mp4 → 返回 video_id"
+          check: "curl -X POST -F 'file=@test.mp4' http://localhost:8000/api/upload | jq .video_id"
+          layer: I
+        - id: M0-A2
+          desc: "上传不支持的格式 → 返回 400"
+          check: "curl -X POST -F 'file=@test.txt' http://localhost:8000/api/upload -w '%{http_code}'"
+          layer: I
+        - id: M0-A3
+          desc: "处理完成 → 下载返回 200 + video/mp4"
+          check: "curl -o /dev/null -w '%{http_code}' http://localhost:8000/api/download/{video_id}"
+          layer: I
+      risks:
+        - dimension: 容错
+          desc: "上传损坏视频 → 后端优雅返回 400 而非崩溃（已有）"
+        - dimension: 安全
+          desc: "文件路径遍历攻击（已有 uuid 防冲突，但需确认路径拼接安全）"
+      depends_on: []
+
+    # ── M1: 时域雾层估计 + DCP 去雾 ─────────────────────────────────────
+    - id: M1
+      name: 时域雾层估计与暗通道先验去雾
+      summary: "运行式最小值雾层估计 + 经典 DCP 去雾 [He et al. 2009]，含引导滤波/快速模式"
+      status: existing
+      interfaces:
+        - name: TemporalFogEstimator.update
+          input: { frame: ndarray(H,W,3) uint8 BGR }
+          output: { dehazed_frame: ndarray(H,W,3) uint8 BGR }
+          side_effects: [更新内部 fog_layer 状态，frame_count +=1]
+        - name: dehaze
+          input: { image: ndarray(H,W,3) uint8 BGR, omega: float=0.95, patch_size: int=15, use_guided_filter: bool=True, use_fast: bool=False }
+          output: { dehazed: ndarray(H,W,3) uint8 BGR }
+          side_effects: []
+      acceptance:
+        - id: M1-A1
+          desc: "合成有雾帧 → DCP 结果暗通道均值低于输入暗通道均值（雾被去除）"
+          check: "cd backend && python -c 'from algorithms.dehaze import dehaze; import cv2; import numpy as np; img=cv2.imread(\"test_foggy.png\"); r=dehaze(img); print(np.mean(img)-np.mean(r))'"
+          layer: U
+        - id: M1-A2
+          desc: "时域估计器：连续相同帧 → fog_layer 收敛到接近输入"
+          check: "cd backend && python -c 'from algorithms.frame_diff import TemporalFogEstimator; import numpy as np; e=TemporalFogEstimator(); f=np.ones((100,100,3),dtype=np.uint8)*128; [e.update(f) for _ in range(20)]; print(np.abs(e.get_fog_layer()-128).max()<5)'"
+          layer: U
+        - id: M1-A3
+          desc: "快速模式（降采样 1/4）→ 输出质量与全分辨率模式接近（SSIM ≥ 0.9）"
+          check: "cd backend && python -c 'from algorithms.dehaze import dehaze; from skimage.metrics import structural_similarity as ssim; import cv2; img=cv2.imread(\"test_foggy.png\"); r1=dehaze(img,use_fast=False); r2=dehaze(img,use_fast=True); print(ssim(cv2.cvtColor(r1,cv2.COLOR_BGR2GRAY),cv2.cvtColor(r2,cv2.COLOR_BGR2GRAY)))'"
+          layer: U
+      risks:
+        - dimension: 容错
+          desc: "引导滤波需要 opencv-contrib-python，如果系统没有 → 自动回退双边滤波（已有）"
+      depends_on: [M0]
+
+    # ── M2: 自适应融合 + 亮度通道增强 ─────────────────────────────────────
+    - id: M2
+      name: 自适应融合与运动蒙版亮度增强
+      summary: "sigmoid 运动幅值融合 temporal/DCP + Lab-L 通道 CLAHE/Unsharp/Gamma + 色彩校正"
+      status: existing
+      interfaces:
+        - name: motion_map
+          input: { current: ndarray(H,W,3), previous: ndarray(H,W,3) }
+          output: { motion_map: ndarray(H,W) float32 [0,1] }
+        - name: fuse_frames
+          input: { temporal_frame: ndarray, dcp_frame: ndarray, motion_map: ndarray }
+          output: { fused: ndarray(H,W,3) uint8 }
+        - name: enhance_frame
+          input: { current_frame: ndarray, previous_frame: ndarray, temporal_frame: ndarray, dcp_frame: ndarray, clahe_clip: float=2.0, sharpen_sigma: float=1.0, sharpen_strength: float=0.8, do_clahe: bool=True, do_sharpen: bool=True, do_gamma: bool=True }
+          output: { enhanced: ndarray(H,W,3) uint8 }
+      acceptance:
+        - id: M2-A1
+          desc: "运动区域（帧差大）→ alpha 接近 1（偏重 temporal）；静止区 → alpha 接近 0（偏重 DCP）"
+          check: "cd backend && python -c 'from algorithms.enhance import compute_motion_map, fuse_frames; import numpy as np; c=np.zeros((100,100,3),dtype=np.uint8); p=np.ones((100,100,3),dtype=np.uint8)*255; m=compute_motion_map(c,p); print(f\"motion_max={m.max():.3f}, motion_min={m.min():.3f}\")'"
+          layer: U
+        - id: M2-A2
+          desc: "CLAHE 仅在亮度通道操作 → a/b 通道值不变"
+          check: "cd backend && python -c 'from algorithms.enhance import _split_luminance,_merge_luminance,_clahe_luminance; import cv2,numpy as np; img=np.random.randint(0,255,(100,100,3),dtype=np.uint8); l,a,b=_split_luminance(img); l2=_clahe_luminance(l); r=_merge_luminance(l2,a,b); la,_,_=_split_luminance(r); print(np.abs(a-_).sum()==0)'"
+          layer: U
+        - id: M2-A3
+          desc: "色彩校正：雾区饱和度被压低，清晰区饱和度保持"
+          check: "cd backend && python -c 'from algorithms.enhance import restore_natural_colors; import cv2,numpy as np; e=np.random.randint(0,255,(100,100,3),dtype=np.uint8); o=np.ones((100,100,3),dtype=np.uint8)*200; r=restore_natural_colors(e,o); print(r.shape)'"
+          layer: U
+      risks:
+        - dimension: 技术债
+          desc: "enhance.py 内 Phase3/4 耦合在一起 → M6 编排器升级时应拆开接口"
+      depends_on: [M1]
+
+    # ── M3: 眩光抑制 ──────────────────────────────────────────────────────
+    - id: M3
+      name: 眩光抑制模块
+      summary: "基于亮通道检测的眩光区域定位 + 局部亮度抑制 + 时域插值恢复被眩光遮挡的纹理"
+      status: new
+      interfaces:
+        - name: detect_glare
+          input: { frame: ndarray(H,W,3) uint8 BGR }
+          output: { glare_mask: ndarray(H,W) uint8 {0,1}, glare_intensity: float }  # 1=眩光像素
+          side_effects: []
+        - name: suppress_glare
+          input: { frame: ndarray(H,W,3) uint8 BGR, glare_mask: ndarray(H,W) uint8, prev_frame: ndarray(H,W,3) uint8 BGR?, strength: float=0.7 }
+          output: { suppressed: ndarray(H,W,3) uint8 BGR }
+          side_effects: []
+      acceptance:
+        - id: M3-A1
+          desc: "合成眩光帧（中心高亮圆斑）→ glare_mask 覆盖该区域 ≥80%"
+          check: "cd backend && python -c 'from algorithms.glare import detect_glare; import cv2,numpy as np; img=np.zeros((200,200,3),dtype=np.uint8); cv2.circle(img,(100,100),30,(255,255,255),-1); cv2.GaussianBlur(img,(15,15),0,img); m,_=detect_glare(img); print(m.sum()>0)'"
+          layer: U
+        - id: M3-A2
+          desc: "眩光区域亮度抑制 ≥50%（处理后眩光 ROI 均值 / 处理前 ≤ 0.5）"
+          check: "cd backend && python -c 'from algorithms.glare import detect_glare,suppress_glare; import cv2,numpy as np; img=np.zeros((200,200,3),dtype=np.uint8); cv2.circle(img,(100,100),30,(200,200,200),-1); cv2.GaussianBlur(img,(15,15),0,img); m,_=detect_glare(img); r=suppress_glare(img,m); before=img[m>0].mean(); after=r[m>0].mean(); print(f\"ratio={after/before:.3f}\")'"
+          layer: U
+        - id: M3-A3
+          desc: "无眩光帧 → mask 空，输出帧与输入帧像素级一致"
+          check: "cd backend && python -c 'from algorithms.glare import detect_glare,suppress_glare; import cv2,numpy as np; img=np.random.randint(30,200,(100,100,3),dtype=np.uint8); m,_=detect_glare(img); r=suppress_glare(img,m); print(np.abs(img.astype(int)-r.astype(int)).sum()==0)'"
+          layer: U
+      risks:
+        - dimension: 容错
+          desc: "眩光与车灯难以区分 → 车灯可能被误抑制。策略：仅抑制半径 >20px 且形状接近圆形的高亮区域，小光源（远车灯）保留"
+        - dimension: 回滚
+          desc: "新模块可被 M6 编排器完全禁用，不侵入现有功能"
+      depends_on: [M0]
+
+    # ── M4: 低光照增强 ────────────────────────────────────────────────────
+    - id: M4
+      name: 低光照增强模块
+      summary: "Retinex 分解（照明层/反射层）→ 照明层自适应伽马 + 反射层 CLAHE + 噪声抑制"
+      status: new
+      interfaces:
+        - name: detect_low_light
+          input: { frame: ndarray(H,W,3) uint8 BGR }
+          output: { is_low_light: bool, mean_luminance: float, low_light_mask: ndarray(H,W) uint8 {0,1} }
+        - name: enhance_low_light
+          input: { frame: ndarray(H,W,3) uint8 BGR, strength: float=1.0 }
+          output: { enhanced: ndarray(H,W,3) uint8 BGR }
+      acceptance:
+        - id: M4-A1
+          desc: "暗帧（mean luminance < 40）→ detect_low_light 返回 True"
+          check: "cd backend && python -c 'from algorithms.low_light import detect_low_light; import cv2,numpy as np; img=np.ones((100,100,3),dtype=np.uint8)*30; r,m,_=detect_low_light(img); print(r)'"
+          layer: U
+        - id: M4-A2
+          desc: "暗区增强后亮度提升 ≥ 2x（ROI 均值比较）"
+          check: "cd backend && python -c 'from algorithms.low_light import enhance_low_light; import cv2,numpy as np; img=np.ones((100,100,3),dtype=np.uint8)*30; r=enhance_low_light(img); print(f\"gain={r.mean()/30:.2f}\")'"
+          layer: U
+        - id: M4-A3
+          desc: "亮帧不受影响 → 输出与输入近似（SSIM ≥ 0.95）"
+          check: "cd backend && python -c 'from algorithms.low_light import enhance_low_light; from skimage.metrics import structural_similarity as ssim; import cv2,numpy as np; img=np.ones((100,100,3),dtype=np.uint8)*200; r=enhance_low_light(img); print(ssim(img,r,channel_axis=2))'"
+          layer: U
+      risks:
+        - dimension: 熔断
+          desc: "暗区增强可能放大噪声 → 加入噪声感知：灰度方差 > 阈值时不增强该像素"
+        - dimension: 技术债
+          desc: "当前 Phase4（enhance.py）已有 CLAHE/Gamma，M4 应与之协调避免双重增强"
+      depends_on: [M0]
+
+    # ── M5: 退化检测器 ────────────────────────────────────────────────────
+    - id: M5
+      name: 帧级退化检测器
+      summary: "基于图像统计量的帧级退化类型检测：雾浓度/眩光强度/低光程度。输出 [0,1] 置信度向量"
+      status: new
+      interfaces:
+        - name: analyze_frame
+          input: { frame: ndarray(H,W,3) uint8 BGR }
+          output: { haze_score: float, glare_score: float, low_light_score: float, details: dict }
+          side_effects: []
+      acceptance:
+        - id: M5-A1
+          desc: "合成雾帧（暗通道均值高）→ haze_score > 0.5"
+          check: "cd backend && python -c 'from algorithms.degradation_detector import analyze_frame; import cv2,numpy as np; img=np.ones((100,100,3),dtype=np.uint8)*180; r=analyze_frame(img); print(r[\"haze_score\"]>0.5)'"
+          layer: U
+        - id: M5-A2
+          desc: "暗帧（mean luminance < 40）→ low_light_score > 0.5"
+          check: "cd backend && python -c 'from algorithms.degradation_detector import analyze_frame; import cv2,numpy as np; img=np.ones((100,100,3),dtype=np.uint8)*30; r=analyze_frame(img); print(r[\"low_light_score\"]>0.5)'"
+          layer: U
+        - id: M5-A3
+          desc: "正常日间帧 → 三个 score 均 < 0.3"
+          check: "cd backend && python -c 'from algorithms.degradation_detector import analyze_frame; import cv2,numpy as np; img=np.ones((100,100,3),dtype=np.uint8)*128 + np.random.randint(-20,20,(100,100,3),dtype=np.int8); r=analyze_frame(img); print(all(v<0.3 for v in [r[\"haze_score\"],r[\"glare_score\"],r[\"low_light_score\"]]))'"
+          layer: U
+      risks:
+        - dimension: 容错
+          desc: "统计基方法在混合退化场景下可能误判 → 阈值可配置，但误判不是灾难（只是多跑了一个模块）"
+      depends_on: []
+
+    # ── M6: 管线编排器 ────────────────────────────────────────────────────
+    - id: M6
+      name: 可插拔管线编排器
+      summary: "重构 processing_service.py，支持按帧退化检测结果动态调度 M1-M4 各模块。所有模块可独立启用/禁用"
+      status: upgrade  # 基于现有 processing_service.py 重构
+      interfaces:
+        - name: process_pipeline
+          input: { input_path: string, output_path: string, config: PipelineConfig }
+          output: { status: string, frames_processed: int }
+          side_effects: [写入输出视频文件]
+        - name: PipelineConfig
+          fields:
+            - { name: enable_fog, type: bool, default: true }
+            - { name: enable_glare, type: bool, default: true }
+            - { name: enable_low_light, type: bool, default: true }
+            - { name: enable_fusion, type: bool, default: true }
+            - { name: enable_enhance, type: bool, default: true }
+            - { name: auto_detect, type: bool, default: true }
+            - { name: haze_threshold, type: float, default: 0.3 }
+            - { name: glare_threshold, type: float, default: 0.4 }
+            - { name: low_light_threshold, type: float, default: 0.35 }
+            - { name: omega, type: float, default: 0.95 }
+            - { name: clahe_clip, type: float, default: 2.0 }
+      acceptance:
+        - id: M6-A1
+          desc: "仅启用去雾 → 输出帧调用 M1 但不调用 M3/M4"
+          check: "cd backend && python -c 'from services.processing_service import process_with_config; import cv2,numpy as np; config={\"enable_fog\":True,\"enable_glare\":False,\"enable_low_light\":False}; r=process_with_config(\"test.mp4\",\"out.mp4\",config); print(r[\"status\"])'"
+          layer: I
+        - id: M6-A2
+          desc: "auto_detect=True → 雾帧自动调用去雾，正常帧跳过"
+          check: "cd backend && python -c 'from services.processing_service import process_with_config; config={\"auto_detect\":True}; r=process_with_config(\"test.mp4\",\"out.mp4\",config); print(r[\"frames_processed\"])'"
+          layer: I
+        - id: M6-A3
+          desc: "全部 disable → 输出与输入逐帧像素一致（无退化处理）"
+          check: "cd backend && python -c 'from services.processing_service import process_with_config; import cv2,numpy as np; config={\"enable_fog\":False,\"enable_glare\":False,\"enable_low_light\":False,\"enable_fusion\":False,\"enable_enhance\":False}; r=process_with_config(\"test.mp4\",\"out.mp4\",config); print(r[\"status\"])'"
+          layer: I
+      risks:
+        - dimension: 回滚
+          desc: "新编排器兼容旧参数格式，旧 processing_service.py 保留为 fallback"
+        - dimension: 技术债
+          desc: "当前 processing_service.py 中 M1-M2 耦合，重构时需提取接口"
+      depends_on: [M1, M2, M3, M4, M5]
+
+    # ── M7: 评估框架 ──────────────────────────────────────────────────────
+    - id: M7
+      name: 定量评估框架
+      summary: "PSNR / SSIM / NIQE / BRISQUE 自动评估脚本，输入原始帧+增强帧，输出 JSON 报告"
+      status: new
+      interfaces:
+        - name: evaluate_video
+          input: { original_path: string, enhanced_path: string, output_json: string }
+          output: { report_path: string }
+          side_effects: [写入 JSON 报告]
+        - name: evaluate_frame_pair
+          input: { original: ndarray(H,W,3), enhanced: ndarray(H,W,3) }
+          output: { psnr: float, ssim: float, niqe: float, brisque: float }
+      acceptance:
+        - id: M7-A1
+          desc: "相同帧 → PSNR=∞ (实际 ≈ 100dB), SSIM=1.0"
+          check: "cd backend && python -c 'from scripts.evaluate import evaluate_frame_pair; import cv2,numpy as np; img=np.random.randint(0,256,(100,100,3),dtype=np.uint8); r=evaluate_frame_pair(img,img); print(r[\"psnr\"]>80 and r[\"ssim\"]>0.99)'"
+          layer: U
+        - id: M7-A2
+          desc: "全黑 vs 全白 → PSNR 低（<10dB），SSIM 低（<0.5）"
+          check: "cd backend && python -c 'from scripts.evaluate import evaluate_frame_pair; import cv2,numpy as np; b=np.zeros((100,100,3),dtype=np.uint8); w=np.ones((100,100,3),dtype=np.uint8)*255; r=evaluate_frame_pair(b,w); print(r[\"psnr\"]<10 and r[\"ssim\"]<0.5)'"
+          layer: U
+        - id: M7-A3
+          desc: "视频级评估 → 生成有效 JSON 报告文件"
+          check: "cd backend && python -c 'from scripts.evaluate import evaluate_video; evaluate_video(\"test_orig.mp4\",\"test_enh.mp4\",\"/tmp/report.json\"); import json; d=json.load(open(\"/tmp/report.json\")); print(\"psnr\" in d)'"
+          layer: I
+      risks:
+        - dimension: 监控
+          desc: "NIQE/BRISQUE 需要 skimage 0.23+，低版本可能缺少接口"
+      depends_on: []
+
+    # ── M8: 基线对比脚本 ──────────────────────────────────────────────────
+    - id: M8
+      name: 经典基线对比脚本
+      summary: "DCP-only / CLAHE-only / Retinex（自定义实现）/ 原片 四条基线 + DriveClear 完整管线对比"
+      status: new
+      interfaces:
+        - name: run_baselines
+          input: { input_video: string, output_dir: string }
+          output: { results: dict }  # 各基线的评估指标
+          side_effects: [输出 4 个处理后的视频文件]
+      acceptance:
+        - id: M8-A1
+          desc: "运行所有基线 → output_dir 下生成 4 个视频文件"
+          check: "cd backend && python -c 'from scripts.baselines import run_baselines; r=run_baselines(\"test.mp4\",\"/tmp/baselines\"); import os; print(len([f for f in os.listdir(\"/tmp/baselines\") if f.endswith(\".mp4\")])==4)'"
+          layer: I
+        - id: M8-A2
+          desc: "输出包含 PSNR/SSIM/NIQE/BRISQUE 对比表（Dict）"
+          check: "cd backend && python -c 'from scripts.baselines import run_baselines; r=run_baselines(\"test.mp4\",\"/tmp/baselines\"); print(all(k in r for k in [\"dcp\",\"clahe\",\"retinex\",\"driveclear\"]))'"
+          layer: U
+      risks:
+        - dimension: 技术债
+          desc: "Retinex 需自定义实现（不用 sklearn），确保与课程内容一致"
+      depends_on: [M7]
+
+    # ── M9: 消融实验框架 ──────────────────────────────────────────────────
+    - id: M9
+      name: 消融实验框架
+      summary: "基于 M6 PipelineConfig 逐一 disable 模块，M7 评估各配置的量化指标，输出消融表"
+      status: new
+      interfaces:
+        - name: run_ablation
+          input: { input_video: string, output_dir: string, configs: list[dict] }
+          output: { ablation_table: list[dict] }  # 每种配置的指标
+          side_effects: [输出 N 个处理后的视频文件]
+      acceptance:
+        - id: M9-A1
+          desc: "运行消融实验 → 输出 N 个视频 + 1 个消融对比表"
+          check: "cd backend && python -c 'from scripts.ablation import run_ablation; configs=[{\"enable_fog\":True,\"enable_glare\":False},{\"enable_fog\":True,\"enable_glare\":True}]; r=run_ablation(\"test.mp4\",\"/tmp/ablation\",configs); print(len(r[\"ablation_table\"])==2)'"
+          layer: I
+        - id: M9-A2
+          desc: "full pipeline 指标 ≥ 任何 subset 指标（消融有效性验证）"
+          check: "cd backend && python -c 'from scripts.ablation import run_ablation; configs=[{\"enable_fog\":True,\"enable_glare\":False,\"enable_low_light\":False},{\"enable_fog\":True,\"enable_glare\":True,\"enable_low_light\":True}]; r=run_ablation(\"test.mp4\",\"/tmp/ablation\",configs); print(r[\"ablation_table\"][1][\"psnr\"]>=r[\"ablation_table\"][0][\"psnr\"])'"
+          layer: I
+      risks:
+        - dimension: 容错
+          desc: "单模块失效不应阻塞全实验，每个 config 独立 try/except"
+      depends_on: [M6, M7]
+
+  # ─── 任务清单 ───────────────────────────────────────────────────────────
+  tasks:
+    - id: T1
+      module: M5
+      title: "实现退化检测器 (degradation_detector.py)"
+      files: ["backend/algorithms/degradation_detector.py"]
+      complexity: 低
+      depends_on: []
+      acceptance: "M5-A1, M5-A2, M5-A3"
+
+    - id: T2
+      module: M3
+      title: "实现眩光抑制模块 (glare.py)"
+      files: ["backend/algorithms/glare.py"]
+      complexity: 中
+      depends_on: []
+      acceptance: "M3-A1, M3-A2, M3-A3"
+
+    - id: T3
+      module: M4
+      title: "实现低光照增强模块 (low_light.py)"
+      files: ["backend/algorithms/low_light.py"]
+      complexity: 中
+      depends_on: []
+      acceptance: "M4-A1, M4-A2, M4-A3"
+
+    - id: T4
+      module: M6
+      title: "重构管线编排器 (processing_service.py) — 可插拔架构"
+      files: ["backend/services/processing_service.py"]
+      complexity: 高
+      depends_on: [T1, T2, T3]
+      acceptance: "M6-A1, M6-A2, M6-A3"
+
+    - id: T5
+      module: M7
+      title: "实现评估框架 (scripts/evaluate.py)"
+      files: ["backend/scripts/evaluate.py"]
+      complexity: 低
+      depends_on: []
+      acceptance: "M7-A1, M7-A2, M7-A3"
+
+    - id: T6
+      module: M8
+      title: "实现基线对比脚本 (scripts/baselines.py)"
+      files: ["backend/scripts/baselines.py"]
+      complexity: 中
+      depends_on: [T5]
+      acceptance: "M8-A1, M8-A2"
+
+    - id: T7
+      module: M9
+      title: "实现消融实验框架 (scripts/ablation.py)"
+      files: ["backend/scripts/ablation.py"]
+      complexity: 中
+      depends_on: [T4, T5]
+      acceptance: "M9-A1, M9-A2"
+
+    - id: T8
+      module: M0
+      title: "前端 control panel 增加退化模块开关 UI"
+      files: ["frontend/src/components/ControlPanel.tsx", "frontend/src/types/index.ts"]
+      complexity: 低
+      depends_on: [T4]
+      acceptance: "M0 前端可传递 enable_glare/enable_low_light 参数"
+
+    - id: T9
+      module: M0
+      title: "API 端点增加自定义处理配置参数"
+      files: ["backend/main.py", "backend/services/processing_service.py"]
+      complexity: 低
+      depends_on: [T4]
+      acceptance: "POST /api/process/{id} 接受 PipelineConfig JSON body"
+
+  # ─── 模块依赖图 ─────────────────────────────────────────────────────────
+  #   M0 ──────────────────────────────┐
+  #   │                                │
+  #   ├── M1 ── M2 ──┐                │
+  #   │              │                │
+  #   ├── M3 ────────┼── M6 ── M9     │
+  #   │              │    │           │
+  #   ├── M4 ────────┘    │           │
+  #   │                   │           │
+  #   └── M5 ─────────────┘           │
+  #                                    │
+  #   M7 ── M8 ────────────────────────┘
+  #
+  # 开发顺序: T1 → T2 → T3 → T4 → T5 → T6 → T7 → T8,T9
+  #           (deg detector → glare → low-light → orchestrator
+  #            → eval → baselines → ablation → UI)

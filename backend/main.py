@@ -11,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
 from services.processing_service import (
+    PipelineConfig,
     ProcessingStatus,
     cancel_processing,
     create_task,
@@ -79,16 +80,16 @@ async def upload_video(file: UploadFile = File(...)):
 
 
 @app.post("/api/process/{video_id}")
-def process_video(video_id: str):
+def process_video(
+    video_id: str,
+    config: dict | None = None,
+):
     """开始处理视频
 
     请求体可选参数（application/json）：
-    - window_size: 时域窗口大小（默认 15）
-    - percentile: 雾层估计分位数（默认 10）
-    - omega: 去雾强度（默认 0.95）
-    - clahe_clip: CLAHE 对比度限制（默认 3.0）
-    - sharpen_sigma: 锐化 σ（默认 1.5）
-    - sharpen_strength: 锐化强度（默认 1.5）
+    - 旧参数: window_size, percentile, omega, clahe_clip, sharpen_sigma, sharpen_strength
+    - 新参数: enable_fog, enable_glare, enable_low_light, auto_detect, ...
+    - 完整配置见 PipelineConfig 定义
     """
     # 查找上传的文件
     upload_dir = Path(__file__).resolve().parent / "uploads"
@@ -99,8 +100,14 @@ def process_video(video_id: str):
 
     input_path = str(video_files[0])
 
+    # 解析配置
+    if config:
+        pipeline_config = PipelineConfig.from_dict(config)
+    else:
+        pipeline_config = PipelineConfig()
+
     # 创建任务
-    task = create_task(video_id, input_path)
+    task = create_task(video_id, input_path, config=pipeline_config)
 
     # 启动后台处理
     success = start_processing(video_id)
