@@ -2,7 +2,6 @@
 视频 I/O 服务 — 封装 OpenCV 视频读写操作
 """
 
-import os
 import uuid
 from pathlib import Path
 
@@ -38,7 +37,11 @@ def validate_video(file_path: str) -> tuple[bool, str]:
         return False, f"不支持的视频格式: {path.suffix}，支持的格式: {', '.join(SUPPORTED_EXTENSIONS)}"
 
     # 检查文件大小
-    if path.stat().st_size > MAX_FILE_SIZE:
+    try:
+        file_size = path.stat().st_size
+    except (FileNotFoundError, OSError) as e:
+        return False, f"文件不存在或无法访问: {e}"
+    if file_size > MAX_FILE_SIZE:
         return False, f"文件过大（超过 500MB 限制）"
 
     # 尝试用 OpenCV 打开
