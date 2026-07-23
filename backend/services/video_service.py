@@ -125,13 +125,19 @@ def write_video(
     Returns:
         output_path: 写入成功的路径
     """
-    fourcc_code = cv2.VideoWriter_fourcc(*fourcc)
-    writer = cv2.VideoWriter(output_path, fourcc_code, fps, (width, height))
+    try:
+        fourcc_code = cv2.VideoWriter_fourcc(*fourcc)
+        writer = cv2.VideoWriter(output_path, fourcc_code, fps, (width, height))
+        if not writer.isOpened():
+            raise RuntimeError(f"无法创建视频编码器 {fourcc}")
+    except Exception as e:
+        raise RuntimeError(f"视频写入初始化失败: {e}")
 
-    for frame in frames:
-        writer.write(frame)
-
-    writer.release()
+    try:
+        for frame in frames:
+            writer.write(frame)
+    finally:
+        writer.release()
     return output_path
 
 

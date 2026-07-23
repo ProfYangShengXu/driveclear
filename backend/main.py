@@ -3,7 +3,6 @@ fog-drive-enhancer 后端服务
 FastAPI 入口 — 提供视频上传/处理/下载/状态查询 REST API
 """
 
-import shutil
 from pathlib import Path
 
 from fastapi import FastAPI, File, HTTPException, UploadFile

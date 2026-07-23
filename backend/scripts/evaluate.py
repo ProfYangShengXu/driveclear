@@ -16,11 +16,6 @@ import cv2
 import numpy as np
 from skimage.metrics import peak_signal_noise_ratio, structural_similarity
 
-try:
-    from skimage.metrics import normalized_root_mse as nrmse
-except ImportError:
-    nrmse = None
-
 
 # ─── 单帧评估 ────────────────────────────────────────────────────────────
 

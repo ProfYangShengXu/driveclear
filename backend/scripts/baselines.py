@@ -208,7 +208,7 @@ def run_baselines(
 
     # 输出汇总
     summary_path = os.path.join(output_dir, "baseline_comparison.json")
-    with open(summary_path, "w") as f:
+    with open(summary_path, "w", encoding="utf-8") as f:
         json.dump(results, f, indent=2, ensure_ascii=False)
     print(f"\nSummary -> {summary_path}")
 
