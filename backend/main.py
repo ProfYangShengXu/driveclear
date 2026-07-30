@@ -3,11 +3,14 @@ fog-drive-enhancer 后端服务
 FastAPI 入口 — 提供视频上传/处理/下载/状态查询 REST API
 """
 
+import io
 from pathlib import Path
 
+import cv2
+import numpy as np
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 
 from services.processing_service import (
     PipelineConfig,
@@ -194,8 +197,6 @@ def get_preview(video_id: str):
             status_code=400, detail=f"视频处理未完成，当前状态: {task.status.value}"
         )
 
-    import cv2
-
     cap = cv2.VideoCapture(task.output_path)
     ret, frame = cap.read()
     cap.release()
@@ -203,15 +204,9 @@ def get_preview(video_id: str):
     if not ret:
         raise HTTPException(status_code=500, detail="无法读取预览帧")
 
-    import io
-
-    import numpy as np
-
     ret_bytes, buf = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
     if not ret_bytes:
         raise HTTPException(status_code=500, detail="生成预览失败")
-
-    from fastapi.responses import StreamingResponse
 
     return StreamingResponse(io.BytesIO(buf.tobytes()), media_type="image/jpeg")
 

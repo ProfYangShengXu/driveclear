@@ -29,13 +29,6 @@ def _gaussian_kernel_1d(radius: int) -> np.ndarray:
     return kernel / kernel.sum()
 
 
-def _make_glare_kernel(radius: int) -> np.ndarray:
-    """生成眩光扩散核 —— 模拟镜头光晕的星形/圆形扩散
-
-    采用高斯核模拟光晕的自然衰减边缘。
-    """
-    return cv2.getGaussianKernel(2 * radius + 1, radius / 2.0)
-
 
 # ─── 公开接口 ────────────────────────────────────────────────────────────
 

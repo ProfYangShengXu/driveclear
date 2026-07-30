@@ -91,17 +91,18 @@ def read_frames(file_path: str, start_frame: int = 0, max_frames: int | None = N
     frame_index = start_frame
     count = 0
 
-    while True:
-        ret, frame = cap.read()
-        if not ret:
-            break
-        yield frame_index, frame
-        frame_index += 1
-        count += 1
-        if max_frames is not None and count >= max_frames:
-            break
-
-    cap.release()
+    try:
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                break
+            yield frame_index, frame
+            frame_index += 1
+            count += 1
+            if max_frames is not None and count >= max_frames:
+                break
+    finally:
+        cap.release()
 
 
 def write_video(
