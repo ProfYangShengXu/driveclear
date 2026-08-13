@@ -82,7 +82,7 @@ def _gamma_correct_illumination(
 
 
 def _enhance_reflectance(
-    bgr: np.ndarray, illumination: np.ndarray, clahe_clip: float = 2.0
+    bgr: np.ndarray, clahe_clip: float = 2.0
 ) -> np.ndarray:
     """增强反射层（局部对比度）
 
@@ -90,7 +90,6 @@ def _enhance_reflectance(
 
     Args:
         bgr: (H, W, 3) uint8 BGR 原图
-        illumination: (H, W) float32 [0, 1]，照明层
         clahe_clip: CLAHE 对比度限制
 
     Returns:
@@ -227,7 +226,7 @@ def enhance_low_light(
     illum_corrected = illum_corrected ** (1.0 / max(strength, 0.1))
 
     # Step 4: 反射层增强（CLAHE on Lab-L）
-    reflectance_enhanced = _enhance_reflectance(frame, illumination, clahe_clip)
+    reflectance_enhanced = _enhance_reflectance(frame, clahe_clip)
 
     # Step 5: 重组合并
     # Retinex: enhanced = reflectance * corrected_illumination

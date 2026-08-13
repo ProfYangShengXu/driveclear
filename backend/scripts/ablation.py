@@ -29,7 +29,7 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from services.processing_service import PipelineConfig, PipelineOrchestrator
-from scripts.evaluate import evaluate_video, evaluate_frame_pair
+from scripts.evaluate import evaluate_video
 
 
 # ─── 预定义的消融配置集 ──────────────────────────────────────────────────

@@ -17,19 +17,6 @@ import cv2
 import numpy as np
 
 
-# ─── 内部辅助 ────────────────────────────────────────────────────────────
-
-
-def _gaussian_kernel_1d(radius: int) -> np.ndarray:
-    """1D 高斯核（归一化），用于分离式高斯模糊"""
-    size = 2 * radius + 1
-    sigma = radius / 2.0
-    x = np.arange(size) - radius
-    kernel = np.exp(-0.5 * (x / sigma) ** 2)
-    return kernel / kernel.sum()
-
-
-
 # ─── 公开接口 ────────────────────────────────────────────────────────────
 
 

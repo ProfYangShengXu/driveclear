@@ -60,15 +60,6 @@ def _texture_density(gray: np.ndarray) -> float:
     return float(np.mean(magnitude)) / 255.0
 
 
-def _dark_channel_mean(bgr: np.ndarray, patch_size: int = 15) -> float:
-    """暗通道均值 —— 辅助特征"""
-    b, g, r = cv2.split(bgr)
-    min_ch = np.minimum(np.minimum(b.astype(np.float32), g.astype(np.float32)), r.astype(np.float32))
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (patch_size, patch_size))
-    dark = cv2.erode(min_ch, kernel)
-    return float(np.mean(dark)) / 255.0
-
-
 def _bright_channel_mean(bgr: np.ndarray, patch_size: int = 15) -> float:
     """亮通道（max of RGB）均值"""
     b, g, r = cv2.split(bgr)
