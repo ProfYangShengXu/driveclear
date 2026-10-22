@@ -20,8 +20,8 @@ import numpy as np
 from algorithms import (
     TemporalFogEstimator, dehaze, enhance_frame,
     analyze_frame,
-    detect_glare, suppress_glare,
-    detect_low_light, enhance_low_light,
+    suppress_glare,
+    enhance_low_light,
 )
 from services.video_service import (
     get_output_path,
@@ -64,7 +64,8 @@ class PipelineConfig:
     auto_detect: bool = True
     haze_threshold: float = 0.3
     glare_threshold: float = 0.4
-    low_light_threshold: float = 0.35
+    # 退化检测评分阈值（与 analyze_frame 的 low_light_score 比较）
+    low_light_score_threshold: float = 0.35
 
     # 去雾参数
     omega: float = 0.95
@@ -85,6 +86,7 @@ class PipelineConfig:
 
     # 低光参数
     low_light_strength: float = 1.0
+    # 增强触发阈值（与 detect_low_light 的 mean_luminance 比较）
     low_light_threshold: float = 0.18
 
     @classmethod
@@ -133,7 +135,12 @@ _tasks: dict[str, ProcessingTask] = {}
 _tasks_lock = threading.Lock()
 
 
-def create_task(video_id: str, input_path: str, config: PipelineConfig | None = None, **legacy_params) -> ProcessingTask:
+def create_task(
+    video_id: str,
+    input_path: str,
+    config: PipelineConfig | None = None,
+    **legacy_params,
+) -> ProcessingTask:
     """创建处理任务
 
     Args:
@@ -216,11 +223,14 @@ class PipelineOrchestrator:
                 result,
                 haze_threshold=cfg.haze_threshold,
                 glare_threshold=cfg.glare_threshold,
-                low_light_threshold=cfg.low_light_threshold,
+                low_light_threshold=cfg.low_light_score_threshold,
             )
             need_haze = cfg.enable_fog and det["haze_score"] >= cfg.haze_threshold
             need_glare = cfg.enable_glare and det["glare_score"] >= cfg.glare_threshold
-            need_low_light = cfg.enable_low_light and det["low_light_score"] >= cfg.low_light_threshold
+            need_low_light = (
+                cfg.enable_low_light
+                and det["low_light_score"] >= cfg.low_light_score_threshold
+            )
         else:
             # 手动模式：按 enable_* 开关强制执行
             need_haze = cfg.enable_fog

@@ -20,7 +20,7 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from algorithms import dehaze, enhance_frame, TemporalFogEstimator
+from algorithms import dehaze
 from scripts.evaluate import evaluate_video
 
 

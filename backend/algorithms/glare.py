@@ -81,12 +81,9 @@ def detect_glare(
 
     glare_mask = np.zeros((h, w), dtype=np.uint8)
 
-    # 预计算距离图用于 center_bias
-    cy, cx = np.mgrid[0:h, 0:w]
+    # 预计算距离图用于 center_bias（逐组件用 centroids 计算，无需全图距离图）
     center_y, center_x = h / 2.0, w / 2.0
-    dist_from_center = np.sqrt((cy - center_y) ** 2 + (cx - center_x) ** 2)
     max_dist = np.sqrt((h / 2) ** 2 + (w / 2) ** 2)
-    dist_norm = dist_from_center / max_dist  # [0, 1], 边缘=1, 中心=0
 
     regions_detail = []
     total_glare_pixels = 0

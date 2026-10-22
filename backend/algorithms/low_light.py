@@ -48,10 +48,9 @@ def _estimate_illumination(bgr: np.ndarray, kernel_size: int | None = None) -> n
     illumination = cv2.GaussianBlur(gray, (kernel_size, kernel_size), sigma)
 
     # 归一化到 [0, 1]
-    # 使用图像的全局最大最小值（而非本 patch），确保不同亮度水平的帧
-    # 在相同尺度下比较。对均匀帧不回退到 0.5，而是使用实际值。
-    max_val = 255.0
-    illumination = illumination / max_val
+    # 使用固定的 255 上限，确保不同亮度水平的帧在相同尺度下比较。
+    # 对均匀帧不回退到 0.5，而是保留实际值。
+    illumination = illumination / 255.0
 
     return illumination
 
@@ -209,8 +208,6 @@ def enhance_low_light(
         raise TypeError(f"frame 须为 numpy.ndarray，收到 {type(frame)}")
     if frame.ndim != 3 or frame.shape[2] != 3:
         raise ValueError(f"frame shape 须为 (H,W,3)，收到 {frame.shape}")
-
-    frame_f32 = frame.astype(np.float32)
 
     # Step 1: 估计照明层
     illumination = _estimate_illumination(frame)

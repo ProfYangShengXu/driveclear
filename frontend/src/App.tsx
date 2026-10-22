@@ -144,7 +144,6 @@ export default function App() {
                 </div>
                 <div>
                   <ControlPanel
-                    videoId={videoId}
                     status={status}
                     progress={progress}
                     onStart={handleStart}

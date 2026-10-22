@@ -105,7 +105,7 @@ export function pollStatus(
           }
           return;
         }
-      } catch (err) {
+      } catch {
         if (!stopped) {
           onError('查询状态失败');
         }

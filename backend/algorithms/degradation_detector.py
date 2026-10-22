@@ -63,7 +63,8 @@ def _texture_density(gray: np.ndarray) -> float:
 def _bright_channel_mean(bgr: np.ndarray, patch_size: int = 15) -> float:
     """亮通道（max of RGB）均值"""
     b, g, r = cv2.split(bgr)
-    max_ch = np.maximum(np.maximum(b.astype(np.float32), g.astype(np.float32)), r.astype(np.float32))
+    max_ch = np.maximum(np.maximum(b.astype(np.float32), g.astype(np.float32)),
+                        r.astype(np.float32))
     kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (patch_size, patch_size))
     bright = cv2.dilate(max_ch, kernel)
     return float(np.mean(bright)) / 255.0
@@ -150,7 +151,9 @@ def _glare_region_ratio(bgr: np.ndarray, brightness_threshold: float = 0.93) -> 
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (15, 15))
     bright_mask = cv2.morphologyEx(bright_mask, cv2.MORPH_CLOSE, kernel)
 
-    num_labels, _, stats, _ = cv2.connectedComponentsWithStats(bright_mask, connectivity=8)
+    num_labels, _, stats, _ = cv2.connectedComponentsWithStats(
+        bright_mask, connectivity=8
+    )
     total_pixels = bgr.shape[0] * bgr.shape[1]
     min_area = total_pixels * 0.01
 
@@ -234,7 +237,10 @@ def analyze_frame(
     # 眩光特征：亮通道均值高 + 存在显著高亮区域（严格筛选）
     # 使用高阈值（V>0.93）后，glare_ratio 在正常帧中应为 0
     # 眩光区域占比在 1%~20% 之间，glare_area_weight 线性映射
-    glare_area_weight = np.clip(glare_ratio * 5.0, 0.0, 1.0) if glare_ratio < 0.2 else 1.0
+    if glare_ratio < 0.2:
+        glare_area_weight = np.clip(glare_ratio * 5.0, 0.0, 1.0)
+    else:
+        glare_area_weight = 1.0
     glare_raw = bri_mean * glare_area_weight
     glare_score = float(_sigmoid(np.array(glare_raw), center=0.15, slope=15.0))
 
@@ -252,7 +258,11 @@ def analyze_frame(
         "low_light": low_light_score,
     }
     max_score_val = max(scores.values())
-    thresholds = {"haze": haze_threshold, "glare": glare_threshold, "low_light": low_light_threshold}
+    thresholds = {
+        "haze": haze_threshold,
+        "glare": glare_threshold,
+        "low_light": low_light_threshold,
+    }
 
     primary = None
     for deg in ["haze", "glare", "low_light"]:

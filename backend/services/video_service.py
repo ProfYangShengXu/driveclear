@@ -34,7 +34,8 @@ def validate_video(file_path: str) -> tuple[bool, str]:
 
     # 检查扩展名
     if path.suffix.lower() not in SUPPORTED_EXTENSIONS:
-        return False, f"不支持的视频格式: {path.suffix}，支持的格式: {', '.join(SUPPORTED_EXTENSIONS)}"
+        supported = ", ".join(sorted(SUPPORTED_EXTENSIONS))
+        return False, f"不支持的视频格式: {path.suffix}，支持的格式: {supported}"
 
     # 检查文件大小
     try:

@@ -5,7 +5,6 @@ import { ProcessingStatus } from '../types';
 const { Text } = Typography;
 
 interface ControlPanelProps {
-  videoId: string;
   status: ProcessingStatus | null;
   progress: number;
   onStart: (params: Record<string, number | boolean>) => void;
@@ -65,11 +64,21 @@ export function ControlPanel({
         </Form.Item>
 
         <Form.Item label="去雾强度 (ω)" name="omega">
-          <Slider min={0.5} max={1.0} step={0.05} marks={{ 0.5: '0.5', 0.75: '0.75', 0.95: '0.95', 1.0: '1.0' }} />
+          <Slider
+            min={0.5}
+            max={1.0}
+            step={0.05}
+            marks={{ 0.5: '0.5', 0.75: '0.75', 0.95: '0.95', 1.0: '1.0' }}
+          />
         </Form.Item>
 
         <Form.Item label="CLAHE 对比度" name="clahe_clip">
-          <Slider min={0.5} max={5.0} step={0.5} marks={{ 0.5: '0.5', 2: '2', 3: '3', 5: '5' }} />
+          <Slider
+            min={0.5}
+            max={5.0}
+            step={0.5}
+            marks={{ 0.5: '0.5', 2: '2', 3: '3', 5: '5' }}
+          />
         </Form.Item>
 
         <Form.Item label="锐化强度" name="sharpen_strength">

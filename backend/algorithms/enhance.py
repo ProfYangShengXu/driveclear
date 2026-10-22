@@ -67,7 +67,9 @@ def fuse_frames(
     alpha = 1.0 / (1.0 + np.exp(-10.0 * (motion_map - 0.3)))
     alpha = alpha[:, :, np.newaxis]
 
-    fused = alpha * temporal_frame.astype(np.float32) + (1.0 - alpha) * dcp_frame.astype(np.float32)
+    fused = alpha * temporal_frame.astype(np.float32) + (1.0 - alpha) * dcp_frame.astype(
+        np.float32
+    )
     return np.clip(fused, 0, 255).astype(np.uint8)
 
 

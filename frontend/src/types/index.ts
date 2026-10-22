@@ -35,18 +35,3 @@ export interface ProcessParams {
   sharpen_sigma?: number;
   sharpen_strength?: number;
 }
-
-/** 应用状态 */
-export interface AppState {
-  videoId: string | null;
-  filename: string | null;
-  status: ProcessingStatus | null;
-  progress: number;
-  videoInfo: {
-    fps: number;
-    width: number;
-    height: number;
-    total_frames: number;
-  } | null;
-  error: string | null;
-}

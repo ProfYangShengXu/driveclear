@@ -1,9 +1,9 @@
-import { useRef, useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, Segmented } from 'antd';
 import { getDownloadUrl } from '../api';
 
 
-type ViewMode = 'original' | 'enhanced' | 'side-by-side';
+type ViewMode = 'original' | 'enhanced';
 
 interface VideoPlayerProps {
   videoId: string;
@@ -12,8 +12,6 @@ interface VideoPlayerProps {
 
 export function VideoPlayer({ videoId, enhanced }: VideoPlayerProps) {
   const [mode, setMode] = useState<ViewMode>('original');
-  const originalRef = useRef<HTMLVideoElement>(null);
-  const enhancedRef = useRef<HTMLVideoElement>(null);
 
   const downloadUrl = getDownloadUrl(videoId);
 
@@ -41,7 +39,6 @@ export function VideoPlayer({ videoId, enhanced }: VideoPlayerProps) {
     >
       {mode === 'original' && (
         <video
-          ref={originalRef}
           src={downloadUrl}
           controls
           style={{ width: '100%', maxHeight: 480 }}
@@ -49,7 +46,6 @@ export function VideoPlayer({ videoId, enhanced }: VideoPlayerProps) {
       )}
       {mode === 'enhanced' && enhanced && (
         <video
-          ref={enhancedRef}
           src={downloadUrl}
           controls
           style={{ width: '100%', maxHeight: 480 }}
