@@ -20,8 +20,9 @@ MAX_FILE_SIZE = 500 * 1024 * 1024
 
 
 def _ensure_dirs():
-    UPLOAD_DIR.mkdir(exist_ok=True)
-    OUTPUT_DIR.mkdir(exist_ok=True)
+    # parents=True：子目录缺失时一并创建，避免首次调用抛 FileNotFoundError
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def validate_video(file_path: str) -> tuple[bool, str]:
@@ -62,8 +63,14 @@ def get_video_info(file_path: str) -> dict:
 
     Returns:
         dict with keys: fps, width, height, total_frames, duration_sec
+
+    Raises:
+        ValueError: 视频无法打开
     """
     cap = cv2.VideoCapture(str(file_path))
+    if not cap.isOpened():
+        cap.release()
+        raise ValueError(f"无法打开视频文件: {file_path}")
     info = {
         "fps": cap.get(cv2.CAP_PROP_FPS),
         "width": int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)),

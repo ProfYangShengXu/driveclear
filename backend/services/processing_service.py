@@ -20,7 +20,7 @@ import numpy as np
 from algorithms import (
     TemporalFogEstimator, dehaze, enhance_frame,
     analyze_frame,
-    suppress_glare,
+    detect_glare, suppress_glare,
     enhance_low_light,
 )
 from services.video_service import (
@@ -139,26 +139,19 @@ def create_task(
     video_id: str,
     input_path: str,
     config: PipelineConfig | None = None,
-    **legacy_params,
 ) -> ProcessingTask:
     """创建处理任务
 
     Args:
         video_id: 视频唯一 ID
         input_path: 输入视频路径
-        config: 管线配置（新 API）
-        legacy_params: 旧参数格式兼容（将被合入 config）
+        config: 管线配置（None=使用默认配置）
     """
     info = get_video_info(input_path)
     output_path = get_output_path(video_id)
 
-    # 合并 config 和 legacy_params
     if config is None:
         config = PipelineConfig()
-    if legacy_params:
-        for k, v in legacy_params.items():
-            if hasattr(config, k):
-                setattr(config, k, v)
 
     task = ProcessingTask(
         video_id=video_id,

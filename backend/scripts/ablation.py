@@ -13,9 +13,10 @@
   - no_fog:    关闭去雾
   - no_glare:  关闭眩光
   - no_ll:     关闭低光
-  - no_fusion: 关闭自适应融合（DCP only）
+  - no_fusion: 关闭融合（仅 DCP）
   - no_enhance: 关闭后处理增强
-  - baseline:  全部关闭（直接输出原片）
+  - dcp_only:  仅 DCP 去雾（关闭检测与其余模块）
+  - none:      全部关闭（直接输出原片）
 """
 
 import json

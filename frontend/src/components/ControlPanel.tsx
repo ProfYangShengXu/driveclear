@@ -12,13 +12,17 @@ interface ControlPanelProps {
   disabled?: boolean;
 }
 
+/**
+ * 默认参数 — 与后端 PipelineConfig 的默认值保持同步，
+ * 避免前端初值反向覆盖后端调优后的参数。
+ */
 const DEFAULT_PARAMS = {
   window_size: 15,
   percentile: 10,
   omega: 0.95,
-  clahe_clip: 3.0,
-  sharpen_sigma: 1.5,
-  sharpen_strength: 1.5,
+  clahe_clip: 2.0,
+  sharpen_sigma: 1.0,
+  sharpen_strength: 0.8,
 };
 
 export function ControlPanel({
@@ -35,16 +39,15 @@ export function ControlPanel({
   const isFailed = status === ProcessingStatus.FAILED;
 
   const handleStart = () => {
-    const values = form.getFieldsValue();
-    onStart({
-      ...DEFAULT_PARAMS,
-      window_size: values.window_size,
-      percentile: values.percentile,
-      omega: values.omega,
-      clahe_clip: values.clahe_clip,
-      sharpen_sigma: values.sharpen_sigma,
-      sharpen_strength: values.sharpen_strength,
-    });
+    // 仅回传表单实际渲染的字段，未渲染的字段不覆盖后端默认值
+    const values = form.getFieldsValue([
+      'window_size',
+      'percentile',
+      'omega',
+      'clahe_clip',
+      'sharpen_strength',
+    ]);
+    onStart({ ...values });
   };
 
   return (

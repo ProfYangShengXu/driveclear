@@ -71,7 +71,8 @@ def evaluate_frame_no_reference(enhanced: np.ndarray) -> dict:
         enhanced: (H, W, 3) uint8 BGR 待评帧
 
     Returns:
-        dict with keys: niqe (近似), brisque (近似), laplacian_variance, contrast, brightness
+        dict with keys: laplacian_variance, contrast, brightness,
+        saturation, edge_ratio, quality_score
     """
     gray = cv2.cvtColor(enhanced, cv2.COLOR_BGR2GRAY)
 
@@ -227,8 +228,8 @@ def compare_all(
 
     # 保存汇总
     os.makedirs(output_dir, exist_ok=True)
-    with open(os.path.join(output_dir, "comparison.json"), "w") as f:
-        json.dump({"comparison": summary, "details": results}, f, indent=2)
+    with open(os.path.join(output_dir, "comparison.json"), "w", encoding="utf-8") as f:
+        json.dump({"comparison": summary, "details": results}, f, indent=2, ensure_ascii=False)
 
     return results
 

@@ -8,7 +8,7 @@ from pathlib import Path
 
 import cv2
 import numpy as np
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import Body, FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 
@@ -78,13 +78,30 @@ async def upload_video(file: UploadFile = File(...)):
     }
 
 
+# ─── 原片回放（供前端"原始"视图使用） ──────────────────────
+
+
+@app.get("/api/upload/{video_id}")
+def get_original_video(video_id: str):
+    """回放上传的原始视频"""
+    if not video_id.isalnum():
+        raise HTTPException(status_code=400, detail="video_id 格式非法")
+
+    upload_dir = Path(__file__).resolve().parent / "uploads"
+    video_files = list(upload_dir.glob(f"{video_id}.*"))
+    if not video_files:
+        raise HTTPException(status_code=404, detail=f"视频 {video_id} 未找到")
+
+    return FileResponse(path=str(video_files[0]), media_type="video/mp4")
+
+
 # ─── 处理控制 ────────────────────────────────────────────────
 
 
 @app.post("/api/process/{video_id}")
 def process_video(
     video_id: str,
-    config: dict | None = None,
+    config: dict | None = Body(default=None),
 ):
     """开始处理视频
 
@@ -93,6 +110,10 @@ def process_video(
     - 新参数: enable_fog, enable_glare, enable_low_light, auto_detect, ...
     - 完整配置见 PipelineConfig 定义
     """
+    # 拒绝含路径分隔符的 ID，防止 upload_dir.glob 越界匹配
+    if not video_id.isalnum():
+        raise HTTPException(status_code=400, detail="video_id 格式非法")
+
     # 查找上传的文件
     upload_dir = Path(__file__).resolve().parent / "uploads"
     video_files = list(upload_dir.glob(f"{video_id}.*"))
