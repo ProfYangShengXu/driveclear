@@ -103,7 +103,11 @@ def _unsharp_luminance(l: np.ndarray, sigma: float = 1.0, strength: float = 0.8)
 
 
 def _gamma_luminance(l: np.ndarray, block_size: int = 64) -> np.ndarray:
-    """对亮度通道做自适应伽马校正"""
+    """对亮度通道做自适应伽马校正
+
+    映射方向：局部越亮 → gamma 越小（<1，进一步提亮）；
+    局部越暗 → gamma 越大（>1，适当压暗，抑制噪声放大）。
+    """
     local_mean = cv2.blur(l, (block_size, block_size)) / 255.0
     gamma_map = 1.4 - 0.8 * local_mean  # [0.6, 1.4]
     corrected = np.power(l / 255.0, gamma_map) * 255.0

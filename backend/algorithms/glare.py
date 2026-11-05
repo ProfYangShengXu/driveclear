@@ -102,7 +102,7 @@ def detect_glare(
         # 计算中心偏移权重：中心附近的组件更有可能是眩光
         comp_cy, comp_cx = centroids[i]
         comp_dist = np.sqrt((comp_cy - center_y) ** 2 + (comp_cx - center_x) ** 2) / max_dist
-        center_weight = 1.0 - comp_dist * center_bias  # [0.7, 1.0]
+        center_weight = 1.0 - comp_dist * center_bias  # 最小 1 - center_bias
 
         # 该组件的贡献
         glare_mask[component_mask == 1] = 255
@@ -151,16 +151,19 @@ def suppress_glare(
     策略：
       1. 对 glare_mask 做高斯羽化（软化边缘）
       2. 在 Lab 色彩空间的 L 通道做局部压低：
-         - 眩光中心区域强度压低到目标亮度
-         - 边缘区域平滑过渡
+        - 眩光中心区域强度压低到接近背景亮度
+        - 边缘区域平滑过渡
       3. 色相保持：a/b 通道不变
       4. 如果提供了前一帧，使用时域插值恢复被眩光遮挡的纹理
+
+    注意：strength 实际作用于「像素亮度超出背景亮度的部分」，取值可 >1，
+    以完全压掉强眩光；文档中的 [0, 1] 仅为推荐范围。
 
     Args:
         frame: (H, W, 3) uint8 BGR 帧
         glare_mask: (H, W) uint8 {0, 255}，detect_glare 的输出
         prev_frame: (H, W, 3) uint8 BGR | None，前一帧用于时域纹理恢复
-        strength: 眩光抑制强度 [0, 1]，0=无效果, 1=最大抑制
+        strength: 眩光抑制强度，1.0=刚好压到背景亮度，<1 保留部分眩光
 
     Returns:
         suppressed: (H, W, 3) uint8 BGR

@@ -78,6 +78,9 @@ export async function cleanupVideo(
 
 /**
  * 轮询处理状态，直到完成或失败
+ *
+ * stop() 只会阻止后续轮询；已发出但尚未返回的请求若失败，
+ * 不再向调用方报错（避免用户主动取消后弹出「查询状态失败」）。
  */
 export function pollStatus(
   videoId: string,
@@ -92,6 +95,8 @@ export function pollStatus(
     while (!stopped) {
       try {
         const status = await getStatus(videoId);
+        // 请求返回时可能已被 stop()，此时丢弃结果
+        if (stopped) return;
         onProgress(status);
 
         if (

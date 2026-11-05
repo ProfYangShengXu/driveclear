@@ -38,6 +38,16 @@ app.add_middleware(
 )
 
 
+# 上传目录（与 video_service.UPLOAD_DIR 保持一致）
+UPLOAD_DIR = Path(__file__).resolve().parent / "uploads"
+
+
+def _resolve_upload_dir() -> Path:
+    """上传目录可能尚未创建，首次访问前先确保存在，避免 glob 返回空列表。"""
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    return UPLOAD_DIR
+
+
 # ─── 健康检查 ────────────────────────────────────────────────
 
 
@@ -56,6 +66,10 @@ async def upload_video(file: UploadFile = File(...)):
     接受 mp4/avi/mov/mkv/webm 格式，最大 500MB。
     返回 video_id 用于后续操作。
     """
+    # 缺少文件名时 extension 推断会失败，直接拒绝
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="缺少文件名")
+
     # 读取文件内容
     contents = await file.read()
 
@@ -87,8 +101,7 @@ def get_original_video(video_id: str):
     if not video_id.isalnum():
         raise HTTPException(status_code=400, detail="video_id 格式非法")
 
-    upload_dir = Path(__file__).resolve().parent / "uploads"
-    video_files = list(upload_dir.glob(f"{video_id}.*"))
+    video_files = list(_resolve_upload_dir().glob(f"{video_id}.*"))
     if not video_files:
         raise HTTPException(status_code=404, detail=f"视频 {video_id} 未找到")
 
@@ -115,8 +128,7 @@ def process_video(
         raise HTTPException(status_code=400, detail="video_id 格式非法")
 
     # 查找上传的文件
-    upload_dir = Path(__file__).resolve().parent / "uploads"
-    video_files = list(upload_dir.glob(f"{video_id}.*"))
+    video_files = list(_resolve_upload_dir().glob(f"{video_id}.*"))
 
     if not video_files:
         raise HTTPException(status_code=404, detail=f"视频 {video_id} 未找到")

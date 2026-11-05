@@ -37,6 +37,9 @@ export function ControlPanel({
   const isProcessing = status === ProcessingStatus.PROCESSING;
   const isCompleted = status === ProcessingStatus.COMPLETED;
   const isFailed = status === ProcessingStatus.FAILED;
+  const isQueued = status === ProcessingStatus.QUEUED;
+  // 队列中同样占用后端任务，禁止重复提交
+  const isBusy = isProcessing || isQueued;
 
   const handleStart = () => {
     // 仅回传表单实际渲染的字段，未渲染的字段不覆盖后端默认值
@@ -56,7 +59,7 @@ export function ControlPanel({
         form={form}
         layout="vertical"
         initialValues={DEFAULT_PARAMS}
-        disabled={isProcessing || disabled}
+        disabled={isBusy || disabled}
       >
         <Form.Item label="时域窗口大小 (帧)" name="window_size">
           <Slider min={5} max={60} marks={{ 5: '5', 15: '15', 30: '30', 60: '60' }} />
@@ -88,7 +91,7 @@ export function ControlPanel({
           <Slider min={0} max={3.0} step={0.1} marks={{ 0: '关', 1: '1', 2: '2', 3: '3' }} />
         </Form.Item>
 
-        {isProcessing && (
+        {isBusy && (
           <div style={{ marginBottom: 16 }}>
             <Progress percent={Math.round(progress)} />
             <Text type="secondary">正在处理中...</Text>
@@ -118,13 +121,13 @@ export function ControlPanel({
             type="primary"
             icon={<PlayCircleOutlined />}
             onClick={handleStart}
-            loading={isProcessing}
-            disabled={isProcessing || isCompleted || disabled}
+            loading={isBusy}
+            disabled={isBusy || isCompleted || disabled}
           >
             {isCompleted ? '已完成' : '开始处理'}
           </Button>
 
-          {isProcessing && (
+          {isBusy && (
             <Button
               danger
               icon={<StopOutlined />}
