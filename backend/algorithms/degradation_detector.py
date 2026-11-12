@@ -28,8 +28,14 @@ import numpy as np
 
 
 def _sigmoid(x: np.ndarray, center: float = 0.0, slope: float = 8.0) -> np.ndarray:
-    """sigmoid 映射，将连续值压到 [0, 1]"""
-    return 1.0 / (1.0 + np.exp(-slope * (x - center)))
+    """sigmoid 映射，将连续值压到 [0, 1]
+
+    np.exp 在参数 < -709 时溢出为 inf（虽 1/(1+inf)=0 结果仍正确，但会刷
+    RuntimeWarning 污染日志），故先把指数项裁剪到 [-30, 30]——该区间外
+    sigmoid 已饱和到 0/1，裁剪不改变数值结果。
+    """
+    z = np.clip(slope * (x - center), -30.0, 30.0)
+    return 1.0 / (1.0 + np.exp(-z))
 
 
 def _mean_luminance(bgr: np.ndarray) -> float:
@@ -228,7 +234,7 @@ def analyze_frame(
         # 纯漂白率在 0~0.7 范围。晴日 <0.2（蓝色天空轻微低饱和），雾天 >0.3
         # 垂直衰减在晴日为 0（上下对比度均匀），雾天 >0.3（远处模糊近处清晰）
         haze_raw = washout * (1.0 + decay)
-        haze_score = float(_sigmoid(np.array(haze_raw), center=0.25, slope=10.0))
+        haze_score = float(_sigmoid(haze_raw, center=0.25, slope=10.0))
 
     # ── 眩光检测 ──────────────────────────────────────────────────────
     bri_mean = _bright_channel_mean(frame)
@@ -242,14 +248,15 @@ def analyze_frame(
     else:
         glare_area_weight = 1.0
     glare_raw = bri_mean * glare_area_weight
-    glare_score = float(_sigmoid(np.array(glare_raw), center=0.15, slope=15.0))
+    # 三个 _sigmoid 入参均为 0 维数组，直接取标量即可，省掉每帧 3 次 np.array 包装
+    glare_score = float(_sigmoid(glare_raw, center=0.15, slope=15.0))
 
     # ── 低光检测 ──────────────────────────────────────────────────────
     lum = _mean_luminance(frame)
     dark_ratio = _low_light_pixel_ratio(frame)
 
     low_light_raw = (1.0 - lum) * dark_ratio
-    low_light_score = float(_sigmoid(np.array(low_light_raw), center=0.15, slope=12.0))
+    low_light_score = float(_sigmoid(low_light_raw, center=0.15, slope=12.0))
 
     # ── 综合判定 ──────────────────────────────────────────────────────
     scores = {

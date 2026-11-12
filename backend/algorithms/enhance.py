@@ -21,6 +21,9 @@ import numpy as np
 
 # ─── Phase 3: 自适应融合 ──────────────────────────────────────
 
+# 灰度差归一化基准：像素差的绝对值超过该值即视为满运动（motion_map = 1）
+MOTION_DIFF_FULL_SCALE = 30.0
+
 
 def compute_motion_map(
     current: np.ndarray, previous: np.ndarray, blur_ksize: int = 15
@@ -44,8 +47,8 @@ def compute_motion_map(
     diff = np.abs(gray_curr - gray_prev)
     diff = cv2.GaussianBlur(diff, (blur_ksize, blur_ksize), 0)
 
-    # 归一化：像素差 > 30 视为高运动
-    motion_map = np.clip(diff / 30.0, 0, 1)
+    # 归一化：像素差 > MOTION_DIFF_FULL_SCALE 视为高运动
+    motion_map = np.clip(diff / MOTION_DIFF_FULL_SCALE, 0, 1)
     return motion_map
 
 

@@ -38,14 +38,12 @@ export function VideoUploader({ onUploadSuccess, disabled }: VideoUploaderProps)
     setUploading(true);
 
     try {
-      // 模拟进度
-      onProgress?.({ percent: 10 });
+      // antd Dragger 会自行上报真实进度，这里不再伪造 10% 以免进度条回跳
       const result = await uploadVideo(file);
       onProgress?.({ percent: 100 });
 
       message.success(`视频 "${result.filename}" 上传成功`);
       onSuccess?.(result);
-      setUploading(false);
       onUploadSuccess(result.video_id, result.filename);
     } catch (err: unknown) {
       // 优先后端返回的 detail，避免只显示 "status code 400"
@@ -57,6 +55,8 @@ export function VideoUploader({ onUploadSuccess, disabled }: VideoUploaderProps)
         : err instanceof Error ? err.message : '上传失败';
       message.error(msg);
       onError?.(new Error(msg));
+    } finally {
+      // 统一在 finally 复位，避免任一分支漏掉导致上传区永久禁用
       setUploading(false);
     }
   };

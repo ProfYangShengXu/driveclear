@@ -138,6 +138,9 @@ def _noise_aware_gain(
 
 # ─── 公开接口 ────────────────────────────────────────────────────────────
 
+# 重组时 CLAHE 反射层的混合权重（0 = 纯 Retinex，1 = 纯 CLAHE）
+CLAHE_BLEND_RATIO = 0.3
+
 
 def detect_low_light(frame: np.ndarray, threshold: float = 0.18) -> dict:
     """检测帧是否为低光照场景
@@ -237,8 +240,7 @@ def enhance_low_light(
     # 新 L = 原始 L × (校正照明 / 原始照明)
     l_new = l_orig * (illum_corrected / illumination)
     # 与 CLAHE 增强的 L 做加权混合（保留细节）
-    blend_ratio = 0.3
-    l_new = (1 - blend_ratio) * l_new + blend_ratio * l_enh
+    l_new = (1 - CLAHE_BLEND_RATIO) * l_new + CLAHE_BLEND_RATIO * l_enh
     l_new = np.clip(l_new, 0, 255)
 
     # Step 6: 噪声感知

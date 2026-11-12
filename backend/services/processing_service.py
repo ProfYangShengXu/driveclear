@@ -92,6 +92,7 @@ class PipelineConfig:
     @classmethod
     def from_dict(cls, d: dict) -> "PipelineConfig":
         """从字典构建（保留默认值）"""
+        # 注意：cls.__dataclass_fields__ 只含本类声明的字段，不含基类字段
         valid_keys = {f.name for f in cls.__dataclass_fields__.values()}
         filtered = {k: v for k, v in d.items() if k in valid_keys}
         return cls(**filtered)
@@ -296,27 +297,27 @@ def _process_video_worker(task: ProcessingTask):
         fourcc = cv2.VideoWriter_fourcc(*"mp4v")
         writer = None
 
-        for frame_idx, frame in read_frames(task.input_path):
-            if task.cancel_requested:
-                task.status = ProcessingStatus.FAILED
-                task.error = "用户取消处理"
-                if writer:
-                    writer.release()
-                return
+        try:
+            for frame_idx, frame in read_frames(task.input_path):
+                if task.cancel_requested:
+                    task.status = ProcessingStatus.FAILED
+                    task.error = "用户取消处理"
+                    return
 
-            if writer is None:
-                writer = cv2.VideoWriter(
-                    task.output_path, fourcc, task.fps, (task.width, task.height)
-                )
+                if writer is None:
+                    writer = cv2.VideoWriter(
+                        task.output_path, fourcc, task.fps, (task.width, task.height)
+                    )
 
-            # 通过编排器处理单帧
-            enhanced = orchestrator.process_frame(frame)
-            writer.write(enhanced)
+                # 通过编排器处理单帧
+                enhanced = orchestrator.process_frame(frame)
+                writer.write(enhanced)
 
-            task.update_progress(frame_idx + 1)
-
-        if writer:
-            writer.release()
+                task.update_progress(frame_idx + 1)
+        finally:
+            # 异常/取消时也释放编码器，否则 ffmpeg 句柄泄漏且 mp4 索引不落盘
+            if writer is not None:
+                writer.release()
 
         task.status = ProcessingStatus.COMPLETED
         task.progress = 100.0

@@ -151,7 +151,7 @@ def process_video(
 
     return {
         "video_id": video_id,
-        "status": ProcessingStatus.PROCESSING,
+        "status": ProcessingStatus.PROCESSING.value,
         "message": "处理已开始",
     }
 

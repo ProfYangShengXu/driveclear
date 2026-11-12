@@ -79,6 +79,7 @@ def estimate_transmission(
         guide_radius: 引导滤波半径
         guide_eps: 引导滤波正则化系数
         fast: 快速模式 — 降采样 1/4 计算传输率再放大
+              （此模式下引导滤波半径自动缩为 guide_radius // 4，最小 5）
 
     Returns:
         transmission: (H, W) 传输率图 [t0, 1.0]
@@ -102,7 +103,8 @@ def estimate_transmission(
                     radius=max(guide_radius // 4, 5),
                     eps=guide_eps,
                 )
-            except cv2.error:
+            except (cv2.error, AttributeError):
+                # ximgproc 缺失时 cv2.ximgproc 属性访问即抛 AttributeError
                 transmission_small = cv2.bilateralFilter(
                     transmission_small.astype(np.float32), d=5, sigmaColor=50, sigmaSpace=10
                 )
@@ -126,7 +128,7 @@ def estimate_transmission(
                 radius=guide_radius,
                 eps=guide_eps,
             )
-        except cv2.error:
+        except (cv2.error, AttributeError):
             # 若系统没有 ximgproc 模块，回退到双边滤波
             transmission = cv2.bilateralFilter(
                 transmission.astype(np.float32), d=9, sigmaColor=50, sigmaSpace=guide_radius
@@ -151,13 +153,11 @@ def recover(
     Returns:
         result: (H, W, 3) uint8 去雾图像
     """
-    transmission = np.clip(transmission, t0, 1.0)
-    result = np.zeros_like(image, dtype=np.float32)
-
-    for c in range(3):
-        result[:, :, c] = (
-            image[:, :, c].astype(np.float32) - A[c]
-        ) / transmission + A[c]
+    transmission = np.clip(transmission, t0, 1.0).astype(np.float32)
+    # 逐通道向量化计算：等价于 (I - A) / t + A，但省掉 Python 循环
+    # 注意 image 为整数数组，先转 float32 再做减法，避免 uint8 下溢成回绕值
+    image_f = image.astype(np.float32)
+    result = (image_f - A.astype(np.float32)) / transmission[:, :, np.newaxis] + A
 
     result = np.clip(result, 0, 255).astype(np.uint8)
     return result

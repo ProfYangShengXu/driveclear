@@ -132,31 +132,29 @@ export default function App() {
 
           {/* Step 2: 处理界面 */}
           {videoId && (
-            <>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 16 }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                  <VideoPlayer videoId={videoId} enhanced={enhanced} />
-                  <VideoExport
-                    videoId={videoId}
-                    status={status}
-                    onCleanup={handleCleanup}
-                  />
-                </div>
-                <div>
-                  <ControlPanel
-                    status={status}
-                    progress={progress}
-                    onStart={handleStart}
-                    onCancel={handleCancel}
-                  />
-                  {filename && (
-                    <div style={{ marginTop: 8, color: '#888', fontSize: 12 }}>
-                      当前视频: {filename}
-                    </div>
-                  )}
-                </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 16 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <VideoPlayer videoId={videoId} enhanced={enhanced} />
+                <VideoExport
+                  videoId={videoId}
+                  status={status}
+                  onCleanup={handleCleanup}
+                />
               </div>
-            </>
+              <div>
+                <ControlPanel
+                  status={status}
+                  progress={progress}
+                  onStart={handleStart}
+                  onCancel={handleCancel}
+                />
+                {filename && (
+                  <div style={{ marginTop: 8, color: '#888', fontSize: 12 }}>
+                    当前视频: {filename}
+                  </div>
+                )}
+              </div>
+            </div>
           )}
         </Space>
       </Content>
