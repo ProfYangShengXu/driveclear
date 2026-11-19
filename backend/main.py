@@ -20,7 +20,7 @@ from services.processing_service import (
     get_task,
     start_processing,
 )
-from services.video_service import cleanup, save_upload, validate_video
+from services.video_service import UPLOAD_DIR, cleanup, save_upload, validate_video
 
 app = FastAPI(
     title="fog-drive-enhancer",
@@ -36,10 +36,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-# 上传目录（与 video_service.UPLOAD_DIR 保持一致）
-UPLOAD_DIR = Path(__file__).resolve().parent / "uploads"
 
 
 def _resolve_upload_dir() -> Path:
@@ -221,6 +217,9 @@ def download_result(video_id: str):
 @app.get("/api/preview/{video_id}")
 def get_preview(video_id: str):
     """获取处理结果的第一帧作为预览图"""
+    if not video_id.isalnum():
+        raise HTTPException(status_code=400, detail="video_id 格式非法")
+
     task = get_task(video_id)
     if task is None:
         raise HTTPException(status_code=404, detail=f"任务 {video_id} 未找到")
@@ -231,10 +230,13 @@ def get_preview(video_id: str):
         )
 
     cap = cv2.VideoCapture(task.output_path)
-    ret, frame = cap.read()
-    cap.release()
+    try:
+        ret, frame = cap.read()
+    finally:
+        # 解码异常时也要释放句柄，避免 ffmpeg 资源累积
+        cap.release()
 
-    if not ret:
+    if not ret or frame is None:
         raise HTTPException(status_code=500, detail="无法读取预览帧")
 
     ret_bytes, buf = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 85])

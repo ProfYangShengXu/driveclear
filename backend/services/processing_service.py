@@ -208,6 +208,9 @@ class PipelineOrchestrator:
         Returns:
             enhanced: (H, W, 3) uint8 BGR
         """
+        if frame is None or frame.ndim != 3 or frame.shape[2] != 3:
+            raise ValueError(f"frame 须为 (H,W,3) BGR，收到 {getattr(frame, 'shape', None)}")
+
         cfg = self.config
         result = frame.copy()
 
@@ -236,7 +239,13 @@ class PipelineOrchestrator:
             temporal_dehazed = self.fog_estimator.update(result)
             dcp_dehazed = dehaze(result, omega=cfg.omega, use_fast=True)
 
-            if self.prev_frame is not None and self.fog_estimator.is_ready():
+            # 消融实验开关：enable_fusion=False 时跳过融合与增强，直出 DCP 结果
+            if (
+                self.prev_frame is not None
+                and self.fog_estimator.is_ready()
+                and cfg.enable_fusion
+                and cfg.enable_enhance
+            ):
                 enhanced_dcp = enhance_frame(
                     current_frame=result,
                     previous_frame=self.prev_frame,
@@ -250,7 +259,7 @@ class PipelineOrchestrator:
                     do_gamma=cfg.do_gamma,
                 )
             else:
-                # 缓冲区未满时暂用 DCP 结果
+                # 缓冲区未满或关闭融合/增强时，均退回 DCP 结果
                 enhanced_dcp = dcp_dehazed
             result = enhanced_dcp
         else:

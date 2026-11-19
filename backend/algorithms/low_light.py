@@ -264,6 +264,7 @@ def low_light_pipeline(
     strength: float = 1.0,
     auto_trigger: bool = True,
     threshold: float = 0.18,
+    clahe_clip: float = 2.0,
 ) -> tuple[np.ndarray, dict]:
     """低光检测 + 增强一站式接口
 
@@ -272,6 +273,7 @@ def low_light_pipeline(
         strength: 增强强度
         auto_trigger: True=仅在低光时增强，False=始终增强
         threshold: 低光判定阈值
+        clahe_clip: CLAHE 对比度限制
 
     Returns:
         (result_frame, detection_info)
@@ -281,5 +283,5 @@ def low_light_pipeline(
     if auto_trigger and not det["is_low_light"]:
         return frame.copy(), det
 
-    result = enhance_low_light(frame, strength=strength)
+    result = enhance_low_light(frame, strength=strength, clahe_clip=clahe_clip)
     return result, det

@@ -48,6 +48,7 @@ export function ControlPanel({
       'percentile',
       'omega',
       'clahe_clip',
+      'sharpen_sigma',
       'sharpen_strength',
     ]);
     onStart({ ...values });
@@ -85,6 +86,10 @@ export function ControlPanel({
             step={0.5}
             marks={{ 0.5: '0.5', 2: '2', 3: '3', 5: '5' }}
           />
+        </Form.Item>
+
+        <Form.Item label="锐化半径 (σ)" name="sharpen_sigma">
+          <Slider min={0.5} max={3.0} step={0.1} marks={{ 0.5: '0.5', 1: '1', 2: '2', 3: '3' }} />
         </Form.Item>
 
         <Form.Item label="锐化强度" name="sharpen_strength">
