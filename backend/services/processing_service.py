@@ -9,7 +9,7 @@
 """
 
 import threading
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from enum import Enum
 from pathlib import Path
 from typing import Callable
@@ -92,8 +92,8 @@ class PipelineConfig:
     @classmethod
     def from_dict(cls, d: dict) -> "PipelineConfig":
         """从字典构建（保留默认值）"""
-        # 注意：cls.__dataclass_fields__ 只含本类声明的字段，不含基类字段
-        valid_keys = {f.name for f in cls.__dataclass_fields__.values()}
+        # 用 dataclasses.fields() 而非 __dataclass_fields__，两者都只含本类声明的字段
+        valid_keys = {f.name for f in fields(cls)}
         filtered = {k: v for k, v in d.items() if k in valid_keys}
         return cls(**filtered)
 

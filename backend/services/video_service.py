@@ -50,8 +50,11 @@ def validate_video(file_path: str) -> tuple[bool, str]:
     cap = cv2.VideoCapture(str(path))
     if not cap.isOpened():
         return False, "无法打开视频文件，文件可能已损坏"
-    ret, frame = cap.read()
-    cap.release()
+    try:
+        ret, frame = cap.read()
+    finally:
+        # 损坏文件在 read() 内可能抛异常，同样要释放句柄
+        cap.release()
     if not ret:
         return False, "视频文件无法读取第一帧，文件可能已损坏"
 

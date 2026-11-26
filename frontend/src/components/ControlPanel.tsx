@@ -15,6 +15,8 @@ interface ControlPanelProps {
 /**
  * 默认参数 — 与后端 PipelineConfig 的默认值保持同步，
  * 避免前端初值反向覆盖后端调优后的参数。
+ * PROCESS_FIELD_NAMES 供 initialValues 与 getFieldsValue 共用，
+ * 保证两边字段集合一致（漏一个就会静默不提交该参数）。
  */
 const DEFAULT_PARAMS = {
   window_size: 15,
@@ -24,6 +26,8 @@ const DEFAULT_PARAMS = {
   sharpen_sigma: 1.0,
   sharpen_strength: 0.8,
 };
+
+const PROCESS_FIELD_NAMES = Object.keys(DEFAULT_PARAMS) as (keyof typeof DEFAULT_PARAMS)[];
 
 export function ControlPanel({
   status,
@@ -43,14 +47,7 @@ export function ControlPanel({
 
   const handleStart = () => {
     // 仅回传表单实际渲染的字段，未渲染的字段不覆盖后端默认值
-    const values = form.getFieldsValue([
-      'window_size',
-      'percentile',
-      'omega',
-      'clahe_clip',
-      'sharpen_sigma',
-      'sharpen_strength',
-    ]);
+    const values = form.getFieldsValue(PROCESS_FIELD_NAMES);
     onStart({ ...values });
   };
 

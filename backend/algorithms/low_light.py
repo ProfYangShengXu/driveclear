@@ -234,8 +234,8 @@ def enhance_low_light(
     lab_orig = cv2.cvtColor(frame, cv2.COLOR_BGR2LAB).astype(np.float32)
     l_orig, a_ch, b_ch = cv2.split(lab_orig)
 
-    lab_enh = cv2.cvtColor(reflectance_enhanced.astype(np.uint8), cv2.COLOR_BGR2LAB).astype(np.float32)
-    l_enh, _, _ = cv2.split(lab_enh)
+    lab_enh = cv2.cvtColor(reflectance_enhanced.astype(np.uint8), cv2.COLOR_BGR2LAB)
+    l_enh, _, _ = cv2.split(lab_enh.astype(np.float32))
 
     # 新 L = 原始 L × (校正照明 / 原始照明)
     l_new = l_orig * (illum_corrected / illumination)
